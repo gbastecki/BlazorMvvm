@@ -3,6 +3,10 @@
 
 Use the MVVM pattern for Blazor with a simple and lightweight library.
 
+## Quick start
+
+This library is distributed via [NuGet](https://www.nuget.org/packages/gbastecki.BlazorMvvm).
+
 ## Usage
 
 ### ViewModel
