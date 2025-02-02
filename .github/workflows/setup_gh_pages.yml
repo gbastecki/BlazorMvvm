@@ -25,8 +25,8 @@ jobs:
       working-directory: ./Demo/BlazorMvvm.Demo
       run: dotnet publish BlazorMvvm.Demo.csproj -c Release -o release
       
-    - name: Change base-tag in index.html from / to BlazorMvvm.Demo
-      run: sed -i 's/<base href="\/" \/>/<base href="\/BlazorMvvm.Demo\/" \/>/g' ${{ env.PUBLISH_DIR }}/index.html
+    - name: Change base-tag in index.html from / to BlazorMvvm
+      run: sed -i 's/<base href="\/" \/>/<base href="\/BlazorMvvm\/" \/>/g' ${{ env.PUBLISH_DIR }}/index.html
   
     - name: copy index.html to 404.html
       run: cp ${{ env.PUBLISH_DIR }}/index.html ${{ env.PUBLISH_DIR }}/404.html
