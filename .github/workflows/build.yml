@@ -1,0 +1,25 @@
+name: build
+
+on:
+    workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    permissions:
+        contents: write
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.x
+
+    - name: Restore dependencies
+      working-directory: ./Demo/BlazorMvvm.Demo
+      run: dotnet restore BlazorMvvm.Demo.csproj
+
+    - name: BuildDemo
+      working-directory: ./Demo/BlazorMvvm.Demo
+      run: dotnet publish BlazorMvvm.Demo.csproj -c Release -o release

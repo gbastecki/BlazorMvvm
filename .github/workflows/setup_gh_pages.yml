@@ -1,0 +1,42 @@
+name: SetupGithubPages
+env:
+  PUBLISH_DIR: /home/runner/work/BlazorMvvm/BlazorMvvm/Demo/BlazorMvvm.Demo/release/wwwroot
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    permissions:
+        contents: write
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.x
+
+    - name: Restore dependencies
+      working-directory: ./Demo/BlazorMvvm.Demo
+      run: dotnet restore BlazorMvvm.Demo.csproj
+
+    - name: BuildDemo
+      working-directory: ./Demo/BlazorMvvm.Demo
+      run: dotnet publish BlazorMvvm.Demo.csproj -c Release -o release
+      
+    - name: Change base-tag in index.html from / to BlazorMvvm.Demo
+      run: sed -i 's/<base href="\/" \/>/<base href="\/BlazorMvvm.Demo\/" \/>/g' ${{ env.PUBLISH_DIR }}/index.html
+  
+    - name: copy index.html to 404.html
+      run: cp ${{ env.PUBLISH_DIR }}/index.html ${{ env.PUBLISH_DIR }}/404.html
+      
+    - name: Add .nojekyll file
+      run: touch ${{ env.PUBLISH_DIR }}/.nojekyll
+      
+    - name: Commit wwwroot to GitHub Pages
+      uses: JamesIves/github-pages-deploy-action@v4
+      with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        BRANCH: gh_pages
+        FOLDER: ${{ env.PUBLISH_DIR }}

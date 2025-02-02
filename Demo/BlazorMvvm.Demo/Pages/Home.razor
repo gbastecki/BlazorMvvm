@@ -1,0 +1,87 @@
+﻿@inherits BlazorMvvmComponentBase<HomeViewModel>
+@page "/"
+
+<div class="this-body">
+    <div class="this-container">
+        <div class="this-group-fieldset">
+            <div class="this-group-legend">HomeViewModel</div>
+            <div>Current counter: @ViewModel.Counter</div>
+
+            <button @onclick="() => ViewModel.IncreaseCounterCommand.Execute(true)">Increase counter with refreshing</button>
+            <button @onclick="() => ViewModel.IncreaseCounterCommand.Execute(false)">Increase counter without refreshing</button>
+
+            <hr />
+
+            <div class="this-container">
+                <div class="this-group-fieldset">
+                    <div class="this-group-legend">ObservablePartViewModel</div>
+                    <ObservableComponent ViewModel="ObservablePartViewModel">
+                        <div>ObservableComponent current counter: @ObservablePartViewModel.Counter</div>
+                    </ObservableComponent>
+                    <button @onclick="() => ObservablePartViewModel.IncreaseCounterCommand.Execute(true)">Increase ObservableComponent counter with refreshing</button>
+                    <button @onclick="() => ObservablePartViewModel.IncreaseCounterCommand.Execute(false)">Increase ObservableComponent counter without refreshing</button>
+                </div>
+            </div>
+
+            <hr />
+
+            <div class="this-container">
+                <div class="this-group-fieldset">
+                    <div class="this-group-legend">SharedObservableViewModel with observable property Counter1</div>
+                    <ObservableComponent ViewModel="SharedObservableViewModel" PropertyNames="[nameof(SharedObservableViewModel.Counter1)]">
+                        <div>SharedObservableViewModel current counter 1: @SharedObservableViewModel.Counter1</div>
+                    </ObservableComponent>
+                    <button @onclick="() => SharedObservableViewModel.IncreaseCounterCommand1.Execute(true)">Increase SharedObservableViewModel counter 1 with refreshing</button>
+                    <button @onclick="() => SharedObservableViewModel.IncreaseCounterCommand1.Execute(false)">Increase SharedObservableViewModel counter 1 without refreshing</button>
+                </div>
+            </div>
+
+            <hr />
+
+            <div class="this-container">
+                <div class="this-group-fieldset">
+                    <div class="this-group-legend">SharedObservableViewModel with observable properties Counter2 and Counter3</div>
+                    <ObservableComponent ViewModel="SharedObservableViewModel" PropertyNames="[nameof(SharedObservableViewModel.Counter2), nameof(SharedObservableViewModel.Counter3)]">
+                        <div>SharedObservableViewModel current counter 2: @SharedObservableViewModel.Counter2</div>
+                        <div>SharedObservableViewModel current counter 3: @SharedObservableViewModel.Counter3</div>
+                    </ObservableComponent>
+
+                    <button @onclick="() => SharedObservableViewModel.IncreaseCounterCommand2.Execute(true)">Increase SharedObservableViewModel counter 2 with refreshing</button>
+                    <button @onclick="() => SharedObservableViewModel.IncreaseCounterCommand2.Execute(false)">Increase SharedObservableViewModel counter 2 without refreshing</button>
+
+                    <button @onclick="() => SharedObservableViewModel.IncreaseCounterCommand3.Execute(true)">Increase SharedObservableViewModel counter 3 with refreshing</button>
+                    <button @onclick="() => SharedObservableViewModel.IncreaseCounterCommand3.Execute(false)">Increase SharedObservableViewModel counter 3 without refreshing</button>
+                </div>
+            </div>
+
+            <hr />
+
+            <div class="this-container">
+                <div class="this-group-fieldset">
+                    <div class="this-group-legend">ButtonExampleViewModel</div>
+                    <ObservableComponent ViewModel="ButtonExampleViewModel">
+                        <button @onclick="ButtonExampleViewModel.DisableButtonCommand.Execute" disabled="@ButtonExampleViewModel.DisableButtonCommand.IsExecuting">Disable button for a few seconds</button>
+                    </ObservableComponent>
+                </div>
+            </div>
+
+            <hr />
+
+            <div class="this-container">
+                <div class="this-group-fieldset">
+                    <div class="this-group-legend">Rectangles dragging</div>
+                    <p>Create rectangles and drag them. Motion should be smooth due to only one component being re-rendered.</p>
+                    <button @onclick="SvgWrapperViewModel.CreateRectanglesCommand.Execute" disabled="@SvgWrapperViewModel.CreateRectanglesCommand.IsExecuting">Create 10000 rectangles</button>
+                    <ObservableComponent ViewModel="SvgWrapperViewModel">
+                        <svg @ref="SvgWrapperViewModel.SvgRef" class="thiscomponent-viewbox-svg" viewBox="0 0 @SvgWrapperViewModel.SvgMaxX @SvgWrapperViewModel.SvgMaxY">
+                            @foreach (var rect in SvgWrapperViewModel.Rectangles)
+                            {
+                                <BlazorMvvm.Demo.Pages.Components.RectangleComponent ViewModel="rect" />
+                            }
+                        </svg>
+                    </ObservableComponent>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

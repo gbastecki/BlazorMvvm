@@ -1,0 +1,19 @@
+﻿@inherits BlazorMvvmComponentBase<RectangleViewModel>
+@if (ViewModel == null) return;
+
+<rect @onmousedown:stopPropagation="true"
+      @onmousedown="ViewModel.OnMouseDownCommand.Execute"
+      @onmousemove:stopPropagation="true"
+      @onmousemove="ViewModel.OnMouseMoveCommand.Execute"
+      @onmouseup:stopPropagation="true"
+      @onmouseup="ViewModel.OnMouseUpCommand.Execute"
+      @onmouseenter:stopPropagation="true"
+      @onmouseenter="ViewModel.OnMouseEnterCommand.Execute"
+      @onmouseout:stopPropagation="true"
+      @onmouseout="ViewModel.OnMouseOutCommand.Execute"
+      width="@RectangleViewModel.RectWidth"
+      height="@RectangleViewModel.RectHeight"
+      style="cursor:move;"
+      fill="red"
+      x="@ViewModel.X"
+      y="@ViewModel.Y" />
