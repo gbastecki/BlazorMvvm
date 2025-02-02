@@ -15,6 +15,7 @@
 		<PackageTags>Blazor;Mvvm;RelayCommand;Observable;ViewModel</PackageTags>
 		<PackageId>BlazorMvvm</PackageId>
 		<Description>Use the MVVM pattern for Blazor with a simple and lightweight library.</Description>
+		<PackageProjectUrl>https://github.com/gbastecki/BlazorMvvm</PackageProjectUrl>
 	</PropertyGroup>
 
 	<ItemGroup>
