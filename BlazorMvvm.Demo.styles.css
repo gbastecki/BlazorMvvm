@@ -1,0 +1,45 @@
+/* /Pages/Home.razor.rz.scp.css */
+.this-body[b-fiufurpu4i] {
+    padding: 2em;
+    display: flex;
+    flex-direction: column;
+    gap: 2em;
+    overflow: auto;
+}
+
+.this-container[b-fiufurpu4i] {
+    margin: auto;
+    background-color: white;
+    width: 100%;
+}
+
+.this-group-fieldset[b-fiufurpu4i] {
+    border: 0.15em solid rgb(235, 235, 235);
+    border-radius: 0.2em;
+    padding: 2em;
+    position: relative;
+    background-color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5em;
+}
+
+.this-group-legend[b-fiufurpu4i] {
+    font-weight: bold;
+    font-size: x-large;
+    position: absolute;
+    top: -0.8em;
+    left: 0.5em;
+    background-color: white;
+    padding: 0.2em;
+}
+
+.thiscomponent-viewbox-svg[b-fiufurpu4i] {
+    width: 30em;
+    height: 30em;
+    max-height: 100%;
+    max-width: 100%;
+    background-color: #161616;
+    user-select: none;
+}
