@@ -1,57 +1,29 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace BlazorMvvm;
 public class BlazorAsyncRelayCommand : IBlazorAsyncRelayCommand
 {
+    private readonly SemaphoreSlim _executionSemaphore = new(1, 1);
+
     private readonly Func<object[]?, Task> _execute;
     private readonly Func<object[]?, Task<bool>>? _canExecute;
 
     public event IBlazorAsyncRelayCommand.IsExecutingChanged? OnIsExecutingChanged;
     public bool AllowConcurrentExecutions { get; set; }
-#if NET9_0_OR_GREATER
-    private readonly System.Threading.Lock _executingLock = new();
-    private bool _isExecuting;
+
+    private volatile bool _isExecuting;
     public bool IsExecuting
     {
-        get
-        {
-            using (_executingLock.EnterScope())
-            {
-                return _isExecuting;
-            }
-        }
+        get => _isExecuting;
         private set
         {
-            using (_executingLock.EnterScope())
-            {
-                _isExecuting = value;
-                OnIsExecutingChanged?.Invoke(value);
-            }
+            if (_isExecuting == value) return;
+            _isExecuting = value;
+            OnIsExecutingChanged?.Invoke(value);
         }
     }
-#else
-    private readonly object _executingLock = new();
-    private bool _isExecuting;
-    public bool IsExecuting
-    {
-        get
-        {
-            lock (_executingLock)
-            {
-                return _isExecuting;
-            }
-        }
-        private set
-        {
-            lock (_executingLock)
-            {
-                _isExecuting = value;
-                OnIsExecutingChanged?.Invoke(value);
-            }
-        }
-    }
-#endif
 
     public BlazorAsyncRelayCommand(Func<object[]?, Task> execute, Func<object[]?, Task<bool>>? canExecute = null, bool allowConcurrentExecutions = false)
     {
@@ -68,15 +40,19 @@ public class BlazorAsyncRelayCommand : IBlazorAsyncRelayCommand
 
     public async void Execute(params object[]? args)
     {
+        if (this._canExecute != null && !await this._canExecute(args)) return;
+        bool shouldExecute = AllowConcurrentExecutions || await _executionSemaphore.WaitAsync(0);
+        if (!shouldExecute) return;
+
         try
         {
-            if (!await CanExecute(args)) return;
             IsExecuting = true;
             await this._execute(args);
         }
         finally
         {
             IsExecuting = false;
+            if (!AllowConcurrentExecutions) _executionSemaphore.Release();
         }
     }
 }
