@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.2]
+### Added
+- Support for .NET 10.
+### Changed
+- Updated `README.md`.
+
 ## [1.0.1]
 ### Changed
 - Updated `README.md` file for better clarity.

@@ -23,12 +23,11 @@ This guide outlines the core components and their usage.
 
 Viewmodels encapsulate the application's presentation logic and state. In BlazorMvvm, your viewmodels must inherit from the `BlazorViewModel` base class.
 
-This base class implements `INotifyPropertyChanged`, which is essential for notifying the UI when a property's value has changed.
+This base class implements `IBlazorViewModel`, which is essential for notifying the UI when a property's value has changed.
 
 Example: `HomeViewModel.cs`
 ```c#
 using BlazorMvvm;
-using System.Runtime.CompilerServices;
 
 namespace YourNamespace;
 
@@ -85,7 +84,6 @@ Example: `Home.razor`
 Example: `Home.razor.cs`
 ```c#
 using BlazorMvvm;
-using Microsoft.AspNetCore.Components;
 
 namespace YourNamespace;
 
