@@ -8,7 +8,7 @@ public class BlazorRelayCommand<T> : IBlazorRelayCommand<T>
 
     public BlazorRelayCommand(Action<T> execute, Func<T, bool>? canExecute = null)
     {
-        this._execute = execute;
+        this._execute = execute ?? throw new ArgumentNullException(nameof(execute));
         this._canExecute = canExecute;
     }
 

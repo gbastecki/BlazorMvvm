@@ -4,13 +4,18 @@
 		<TargetFrameworks>net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
 		<Nullable>enable</Nullable>
 		<TrimMode>full</TrimMode>
-		<Version>1.0.2</Version>
-		<AssemblyVersion>1.0.2.0</AssemblyVersion>
-		<FileVersion>1.0.2.0</FileVersion>
+		
+		<Version>1.0.3</Version>
+		<AssemblyVersion>1.0.3.0</AssemblyVersion>
+		<FileVersion>1.0.3.0</FileVersion>
+
+		<IsPackable>true</IsPackable>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<IncludeBuildOutput>true</IncludeBuildOutput>
+
 		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 		<Title>BlazorMvvm</Title>
 		<Authors>Grzegorz Bastecki</Authors>
-		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageTags>Blazor;Mvvm;RelayCommand;Observable;ViewModel</PackageTags>
 		<PackageId>gbastecki.BlazorMvvm</PackageId>
@@ -19,27 +24,41 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <None Include="..\..\LICENSE">
-	    <Pack>True</Pack>
-	    <PackagePath>\</PackagePath>
-	  </None>
-	  <None Include="..\..\README.md">
-	    <Pack>True</Pack>
-	    <PackagePath>\</PackagePath>
-	  </None>
+		<None Include="..\..\LICENSE">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+		<None Include="..\..\README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
 	</ItemGroup>
-
 
 	<ItemGroup>
 		<SupportedPlatform Include="browser" />
 	</ItemGroup>
 	
 	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="[10.0.0,11)" Condition="'$(TargetFramework)' == 'net10.0'" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="[9.0.0,10)" Condition="'$(TargetFramework)' == 'net9.0'" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="[8.0.0,9)" Condition="'$(TargetFramework)' == 'net8.0'" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="[7.0.0,8)" Condition="'$(TargetFramework)' == 'net7.0'" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="[6.0.0,7)" Condition="'$(TargetFramework)' == 'net6.0'" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="[10.0.0,)" Condition="'$(TargetFramework)' == 'net10.0'" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="[9.0.0,)" Condition="'$(TargetFramework)' == 'net9.0'" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="[8.0.0,)" Condition="'$(TargetFramework)' == 'net8.0'" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="[7.0.0,)" Condition="'$(TargetFramework)' == 'net7.0'" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="[6.0.0,)" Condition="'$(TargetFramework)' == 'net6.0'" />
+	</ItemGroup>
+	
+	<ItemGroup>
+		<ProjectReference Include="..\..\Generator\BlazorMvvm.Generator\BlazorMvvm.Generator.csproj">
+			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+			<OutputItemType>Analyzer</OutputItemType>
+		</ProjectReference>
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="..\..\Generator\BlazorMvvm.Generator\bin\$(Configuration)\netstandard2.0\BlazorMvvm.Generator.dll">
+			<Pack>true</Pack>
+			<PackagePath>analyzers/dotnet/cs</PackagePath>
+			<Visible>false</Visible>
+		</None>
 	</ItemGroup>
 
 </Project>

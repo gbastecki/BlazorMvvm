@@ -8,7 +8,7 @@ public class BlazorCommand : IBlazorCommand
 
     public BlazorCommand(Action execute, Func<bool>? canExecute = null)
     {
-        this._execute = execute;
+        this._execute = execute ?? throw new ArgumentNullException(nameof(execute));
         this._canExecute = canExecute;
     }
 

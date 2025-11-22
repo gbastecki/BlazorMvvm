@@ -65,6 +65,52 @@ public class HomeViewModel : BlazorViewModel
         // 3. It raises the OnPropertyChanged event.
         set => Set(ref _counter2, value);
     }
+
+    // --- Command example ---
+    
+    private void IncrementCounter()
+    {
+        Counter++;
+    }
+    private IBlazorCommand _incrementCounterCommand;
+    public IBlazorCommand IncrementCounterCommand => _incrementCounterCommand ??= new BlazorCommand(IncrementCounter);
+}
+```
+
+Example: `HomeViewModel.cs` with Source Generation
+```c#
+using BlazorMvvm;
+
+namespace YourNamespace;
+
+public partial class HomeViewModel : BlazorViewModel //class must be partial
+{
+    [BlazorObservableProperty]
+    private int _counter;
+    // Generates:
+    // public int Counter
+    // {
+    //     get => _counter;
+    //     set => Set(ref _counter, value);
+    // }
+
+    [BlazorObservableProperty]
+    private int _counter2;
+    // Generates:
+    // public int Counter2
+    // {
+    //     get => _counter2;
+    //     set => Set(ref _counter2, value);
+    // }
+
+    [BlazorCommand]
+    private void IncrementCounter()
+    {
+        Counter++;
+    }
+    // Generates:
+    // private BlazorMvvm.IBlazorCommand _incrementCounterCommand;
+    // public BlazorMvvm.IBlazorCommand IncrementCounterCommand => _incrementCounterCommand ??= new BlazorMvvm.BlazorCommand(IncrementCounter);
 }
 ```
 
@@ -76,7 +122,7 @@ To bind a view (Blazor Component) to a viewmodel, your components should inherit
 The final step is to connect your viewmodel instance to the component by calling `SetDataContext()` in the component's `OnInitialized` lifecycle method. This subscribes the component to the viewmodel's `PropertyChanged` events, automatically triggering `StateHasChanged()` to re-render the component when a property is updated.
 
 Example: `Home.razor`
-```c#
+```razor
 @using BlazorMvvm
 @inherits BlazorMvvmComponentBase<HomeViewModel>
 ```
@@ -116,7 +162,7 @@ The `ObservableComponent` allows you to define fine-grained "observable" fragmen
 - **Selective Update**: Pass a `ViewModel` and a `PropertyNames` array. The child content will only re-render when one of the specified properties raises its `OnPropertyChanged` event.
 
 Example: `Home.razor`
-```c#
+```razor
 @using BlazorMvvm
 @inherits BlazorMvvmComponentBase<HomeViewModel>
 
@@ -256,7 +302,7 @@ public class ButtonExampleViewModel : BlazorViewModel, IDisposable
 Example: `.razor` Component
 
 This component hosts the `ButtonExampleViewModel` inside an `ObservableComponent` to ensure the button state updates correctly.
-```c#
+```razor
 @using BlazorMvvm
 @inherits BlazorMvvmComponentBase<HomeViewModel>
 
@@ -279,3 +325,142 @@ This component hosts the `ButtonExampleViewModel` inside an `ObservableComponent
     }
 }
 ```
+
+##
+### Source generation
+
+#### Features
+
+- **Automatic property generation**: Convert fields into observable properties with `[BlazorObservableProperty]`.
+- **Commands generation**: Generate `Commands` implementations from methods with `[BlazorCommand]`.
+- **Async support**: Support for both `Task` and `ValueTask` in commands.
+- **Flexible CanExecute**: Support for synchronous and asynchronous `CanExecute` methods.
+- **Parameter support**: Handle parameterless methods, single parameters, and multiple parameters (using Tuples).
+- **Concurrency control**: Configure concurrent execution behavior for async commands.
+
+#### Observable Properties
+
+Decorate a private field with `[BlazorObservableProperty]` to generate a public property with change notification.
+
+ViewModel classes must be declared as `partial` to use this feature.
+
+The generator assumes the field is named either `lowerCamel`, `_lowerCamel` or `m_lowerCamel`, and it will transform that to be `UpperCamel`.
+
+```c#
+public partial class CounterViewModel : BlazorViewModel
+{
+    [BlazorObservableProperty]
+    private int _count;
+
+    // Generates:
+    // public int Count
+    // {
+    //     get => _count;
+    //     set => Set(ref _count, value);
+    // }
+}
+```
+
+#### Commands
+Decorate a method with `[BlazorCommand]` to generate a proper `Command`.
+
+##### Synchronous Command
+
+```c#
+[BlazorCommand]
+private void Increment()
+{
+    Count++;
+}
+
+// Generates: public IBlazorCommand IncrementCommand { get; }
+```
+
+##### Asynchronous Command
+
+Supports both `Task` and `ValueTask`.
+
+```c#
+[BlazorCommand]
+private async Task LoadDataAsync()
+{
+    await Task.Delay(1000);
+    // ...
+}
+
+// Generates: public IBlazorAsyncCommand LoadDataAsyncCommand { get; }
+```
+
+##### Command with Parameter
+
+```c#
+[BlazorCommand]
+private void UpdateMessage(string message)
+{
+    Message = message;
+}
+
+// Generates: public IBlazorRelayCommand<string> UpdateMessageCommand { get; }
+```
+
+##### Command with Multiple Parameters
+
+Methods with multiple parameters are wrapped using a Tuple.
+
+```c#
+[BlazorCommand]
+private void Add(int a, int b)
+{
+    Count = a + b;
+}
+
+// Generates: public IBlazorRelayCommand<(int, int)> AddCommand { get; }
+// Usage in View: CommandParameter="@((5, 10))"
+```
+
+#### CanExecute Logic
+
+You can specify a method to control command execution using the `CanExecute` parameter (via constructor argument or property).
+
+##### Synchronous CanExecute
+
+```c#
+[BlazorCommand(CanExecute = nameof(CanIncrement))]
+private void Increment() => Count++;
+
+private bool CanIncrement() => Count < 10;
+```
+
+##### Asynchronous CanExecute
+
+The source generator automatically handles wrapping synchronous predicates for async commands, or you can use async predicates.
+
+```c#
+[BlazorCommand(nameof(CanDoAsync))]
+private async Task DoAsync() { ... }
+
+// Can be synchronous bool
+// private bool CanDoAsync() => true;
+
+// Or asynchronous
+private async Task<bool> CanDoAsync() 
+{
+    // ...
+    return true;
+}
+```
+
+#### Concurrency Control
+
+For async commands, you can control whether multiple executions are allowed simultaneously.
+
+```c#
+// Prevent concurrent executions (default is false)
+[BlazorCommand(AllowConcurrentExecutions = false)]
+private async Task SubmitAsync()
+{
+    // ...
+}
+```
+
+##

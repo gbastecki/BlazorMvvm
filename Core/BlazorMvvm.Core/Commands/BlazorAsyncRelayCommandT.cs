@@ -27,7 +27,7 @@ public class BlazorAsyncRelayCommand<T> : IBlazorAsyncRelayCommand<T>
 
     public BlazorAsyncRelayCommand(Func<T, Task> execute, Func<T, Task<bool>>? canExecute = null, bool allowConcurrentExecutions = false)
     {
-        this._execute = execute;
+        this._execute = execute ?? throw new ArgumentNullException(nameof(execute));
         this._canExecute = canExecute;
         this.AllowConcurrentExecutions = allowConcurrentExecutions;
     }
