@@ -1,4 +1,15 @@
-# Changelog
+﻿# Changelog
+
+## [1.1.0]
+### Added
+- `BlazorMvvmViewModelFactory` for resolving ViewModels.
+- `BlazorMvvmViewModelAttribute` for registering ViewModels in ViewModelFactory.
+- `BlazorMvvmViewModelFactoryConstructorAttribute` to mark which ViewModel constructor should be used when resolving ViewModel if it has multiple constructors.
+- Source generator to auto-generate ViewModel registration code.
+- Unit tests for ViewModelFactory and related attributes.
+### Changed
+- `InvokeRefresh` in `BlazorMvvmComponentBase` is now `protected virtual` instead of `private`.
+- Updated `README.md` with new features.
 
 ## [1.0.3]
 ### Added

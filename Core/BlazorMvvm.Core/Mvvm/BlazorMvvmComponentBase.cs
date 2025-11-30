@@ -6,9 +6,26 @@ using System.Threading.Tasks;
 namespace BlazorMvvm;
 public abstract class BlazorMvvmComponentBase<TViewModel> : ComponentBase, IAsyncDisposable where TViewModel : IBlazorViewModel
 {
+    [Inject] protected IServiceProvider ServiceProvider { get; set; } = default!;
+    [Inject] protected IBlazorMvvmViewModelFactory ViewModelFactory { get; set; } = default!;
+    [Inject] protected BlazorMvvmScopedCache ScopedCache { get; set; } = default!;
+
     protected TViewModel? BaseViewModel;
     protected HashSet<string>? PropertyNamesHashset;
     private bool _shouldRefresh;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        if (BaseViewModel == null)
+        {
+            var viewModel = (TViewModel)ViewModelFactory.GetViewModel(typeof(TViewModel), ServiceProvider, ScopedCache);
+            if (viewModel != null)
+            {
+                SetDataContext(viewModel);
+            }
+        }
+    }
 
     public async ValueTask DisposeAsync()
     {
@@ -56,7 +73,7 @@ public abstract class BlazorMvvmComponentBase<TViewModel> : ComponentBase, IAsyn
         InvokeRefresh();
     }
 
-    private void InvokeRefresh()
+    protected virtual void InvokeRefresh()
     {
         _shouldRefresh = true;
         base.InvokeAsync(StateHasChanged);

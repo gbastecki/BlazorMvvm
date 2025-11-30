@@ -1,7 +1,6 @@
-﻿using BlazorMvvm;
-
-namespace BlazorMvvm.Demo.Pages
+﻿namespace BlazorMvvm.Demo.Pages
 {
+    [BlazorMvvmViewModel(ViewModelLifetime.Singleton)]
     public class HomeViewModel : BlazorViewModel
     {
         private int _counter;

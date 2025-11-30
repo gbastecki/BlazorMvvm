@@ -5,10 +5,10 @@
     <div class="this-container">
         <div class="this-group-fieldset">
             <div class="this-group-legend">HomeViewModel</div>
-            <div>Current counter: @ViewModel.Counter</div>
+            <div>Current counter: @BaseViewModel.Counter</div>
 
-            <button @onclick="() => ViewModel.IncreaseCounterCommand.Execute(true)">Increase counter with refreshing</button>
-            <button @onclick="() => ViewModel.IncreaseCounterCommand.Execute(false)">Increase counter without refreshing</button>
+            <button @onclick="() => BaseViewModel.IncreaseCounterCommand.Execute(true)">Increase counter with refreshing</button>
+            <button @onclick="() => BaseViewModel.IncreaseCounterCommand.Execute(false)">Increase counter without refreshing</button>
 
             <hr />
 

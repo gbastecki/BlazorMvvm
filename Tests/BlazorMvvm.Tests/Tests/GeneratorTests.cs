@@ -1,6 +1,6 @@
 ﻿using BlazorMvvm.Tests.ViewModel;
 
-namespace BlazorMvvm.Tests.Generator
+namespace BlazorMvvm.Tests.Tests
 {
     [TestClass]
     public class GeneratorTests

@@ -1,4 +1,4 @@
-# BlazorMvvm
+﻿# BlazorMvvm
 ![https://github.com/github/docs/actions/workflows/main.yml](https://github.com/gbastecki/BlazorMvvm/actions/workflows/build.yml/badge.svg)
 [![GitHub](https://img.shields.io/github/license/gbastecki/BlazorMvvm?color=0000a4&style=plastic)](https://github.com/gbastecki/BlazorMvvm/blob/main/LICENSE)
 [![NuGet version](https://img.shields.io/nuget/v/gbastecki.BlazorMvvm?color=6a00d5&label=nuget%20version&logo=nuget&style=plastic)](https://www.nuget.org/packages/gbastecki.BlazorMvvm/)
@@ -327,7 +327,107 @@ This component hosts the `ButtonExampleViewModel` inside an `ObservableComponent
 ```
 
 ##
-### Source generation
+### ViewModelFactory
+
+The `BlazorMvvmViewModelFactory` is responsible for resolving and providing instances of ViewModels with support for different lifetimes.
+
+#### Features
+
+- **Automatic Dependency Injection**: ViewModels can be automatically registered and injected.
+- **Lazy Loading support**: Works seamlessly with lazy-loaded assemblies.
+- **AOT & Trimming compatible**: Uses Source Generators and Module Initializers to avoid runtime reflection, making it fully compatible with AOT and Trimming.
+- **Flexible lifetimes**: Support for `Transient`, `Scoped`, and `Singleton` ViewModels.
+- **Constructor Selection**: Ability to specify which constructor to use when multiple constructors are present.
+- **Service Injection**: Supports constructor injection for services registered in the DI container.
+- **Integration with BlazorMvvmComponentBase**: Automatically resolves and injects ViewModels into components.
+
+
+#### Setup
+To use automatic dependency injection for registered ViewModels, in your main `Program.cs`, add the following line to register the BlazorMvvm ViewModelFactory:
+```c#
+builder.Services.UseBlazorMvvmViewModelFactory();
+```
+
+#### Registering ViewModels
+To register a ViewModel with the `BlazorMvvmViewModelFactory`, decorate the ViewModel class with the `[BlazorMvvmViewModel]` attribute, specifying the desired lifetime.
+
+```c#
+[BlazorMvvmViewModel(ViewModelLifetime.Singleton)]
+public class HomeViewModel : BlazorViewModel { ... }
+```
+
+#### ViewModelFactory parameters injection
+You can also register services that your ViewModels depend on in the DI container as usual, to make them available for constructor injection.
+```c#
+builder.Services.AddSingleton<IService, ServiceImplementation>();
+```
+
+Then, you can declare constructor parameters in your ViewModel, and they will be automatically injected when the ViewModel is resolved.
+```c#
+[BlazorMvvmViewModel(ViewModelLifetime.Singleton)]
+public class HomeViewModel : BlazorViewModel 
+{
+    private readonly IService _service;
+    public HomeViewModel(IService service) 
+    {
+        _service = service;
+    }
+}
+```
+
+#### ViewModelFactory constructor selection
+If your ViewModel has multiple constructors, you can specify which constructor should be used by decorating it with the `[BlazorMvvmViewModelFactoryConstructor]` attribute.
+```c#
+[BlazorMvvmViewModel(ViewModelLifetime.Singleton)]
+public class HomeViewModel : BlazorViewModel 
+{
+    private readonly IService _service;
+    public HomeViewModel() 
+    {
+    }
+    // This constructor will be used by the ViewModelFactory
+    [BlazorMvvmViewModelFactoryConstructor]
+    public HomeViewModel(IService service) 
+    {
+        _service = service;
+    }
+}
+```
+
+#### ViewModel lifetimes initialized via ViewModelFactory
+You can control the lifetime of your ViewModels using the attribute:
+
+- `[BlazorMvvmViewModel(ViewModelLifetime.Transient)]`: Created every time it's requested (Default).
+- `[BlazorMvvmViewModel(ViewModelLifetime.Scoped)]`: Created once per scope.
+- `[BlazorMvvmViewModel(ViewModelLifetime.Singleton)]`: Created once per application.
+
+#### Using ViewModelFactory in components
+When using the `BlazorMvvmViewModelFactory`, you can retrieve ViewModel instances via dependency injection.
+
+There is no need to call `SetDataContext()` manually, as the base class will do it for you.
+
+Example: `Home.razor.cs` with ViewModelFactory registration
+```c#
+using BlazorMvvm;
+
+namespace YourNamespace;
+
+public partial class Home : BlazorMvvmComponentBase<HomeViewModel>
+{
+    // ViewModel will be resolved and injected automatically if registered with [BlazorMvvmViewModelAttribute].
+    // No need to instantiate it manually.
+    // It can be accessed via BaseViewModel property inherited from BlazorMvvmComponentBase<T>.
+    // OnInitialized will call SetDataContext automatically.
+    // Just make sure to call base.OnInitialized() if overriding OnInitialized.
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+    }
+}
+```
+
+##
+### Source generation for properties and commands
 
 #### Features
 
@@ -415,7 +515,7 @@ private void Add(int a, int b)
 }
 
 // Generates: public IBlazorRelayCommand<(int, int)> AddCommand { get; }
-// Usage in View: CommandParameter="@((5, 10))"
+// Usage in View: <button @onclick="() => AddCommand.Execute((5, 10))"></button>
 ```
 
 #### CanExecute Logic

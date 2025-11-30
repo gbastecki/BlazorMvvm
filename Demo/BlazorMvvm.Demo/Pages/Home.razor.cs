@@ -7,7 +7,6 @@ namespace BlazorMvvm.Demo.Pages
     public partial class Home : BlazorMvvmComponentBase<HomeViewModel>
     {
         [Inject] SvgHandler SvgHandler { get; set; }
-        HomeViewModel ViewModel;
         ObservablePartViewModel ObservablePartViewModel;
         SharedObservableViewModel SharedObservableViewModel;
         ButtonExampleViewModel ButtonExampleViewModel;
@@ -15,12 +14,10 @@ namespace BlazorMvvm.Demo.Pages
 
         protected override void OnInitialized()
         {
-            ViewModel = new();
             ObservablePartViewModel = new();
             SharedObservableViewModel = new();
             ButtonExampleViewModel = new();
             SvgWrapperViewModel = new(SvgHandler);
-            SetDataContext(ViewModel);
             base.OnInitialized();
         }
     }
