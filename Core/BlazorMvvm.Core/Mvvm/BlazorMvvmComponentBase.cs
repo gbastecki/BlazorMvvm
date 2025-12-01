@@ -19,10 +19,14 @@ public abstract class BlazorMvvmComponentBase<TViewModel> : ComponentBase, IAsyn
         base.OnInitialized();
         if (BaseViewModel == null)
         {
-            var viewModel = (TViewModel)ViewModelFactory.GetViewModel(typeof(TViewModel), ServiceProvider, ScopedCache);
-            if (viewModel != null)
+            var vm = ViewModelFactory.GetViewModel(typeof(TViewModel), ServiceProvider, ScopedCache);
+            if (vm != null)
             {
-                SetDataContext(viewModel);
+                var viewModel = (TViewModel)vm;
+                if (viewModel != null)
+                {
+                    SetDataContext(viewModel);
+                }
             }
         }
     }

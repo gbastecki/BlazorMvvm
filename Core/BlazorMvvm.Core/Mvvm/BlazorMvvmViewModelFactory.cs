@@ -7,13 +7,16 @@ namespace BlazorMvvm
     {
         private readonly ConcurrentDictionary<Type, object> _singletonCache = new();
 
-        public IBlazorViewModel GetViewModel(Type viewModelType, IServiceProvider serviceProvider, BlazorMvvmScopedCache scopedCache)
+        public IBlazorViewModel? GetViewModel(Type viewModelType, IServiceProvider serviceProvider, BlazorMvvmScopedCache scopedCache)
         {
             var (factory, lifetime) = ViewModelRegistry.GetViewModelInfo(viewModelType);
+            object? vm;
 
             if (lifetime == ViewModelLifetime.Singleton)
             {
-                return (IBlazorViewModel)_singletonCache.GetOrAdd(viewModelType, t => CreateViewModel(t, serviceProvider, factory));
+                vm = CreateViewModel(serviceProvider, factory);
+                if (vm == null) return null;
+                return (IBlazorViewModel)_singletonCache.GetOrAdd(viewModelType, t => vm);
             }
 
             if (lifetime == ViewModelLifetime.Scoped)
@@ -23,21 +26,24 @@ namespace BlazorMvvm
                     return (IBlazorViewModel)cachedVm;
                 }
 
-                var vm = CreateViewModel(viewModelType, serviceProvider, factory);
+                vm = CreateViewModel(serviceProvider, factory);
+                if (vm == null) return null;
                 scopedCache.Cache[viewModelType] = vm;
                 return (IBlazorViewModel)vm;
             }
 
-            return (IBlazorViewModel)CreateViewModel(viewModelType, serviceProvider, factory);
+            vm = CreateViewModel(serviceProvider, factory);
+            if (vm == null) return null;
+            return (IBlazorViewModel)vm;
         }
 
-        private static object CreateViewModel(Type viewModelType, IServiceProvider serviceProvider, Func<IServiceProvider, IBlazorViewModel>? factory)
+        private static object? CreateViewModel(IServiceProvider serviceProvider, Func<IServiceProvider, IBlazorViewModel>? factory)
         {
             if (factory != null)
             {
                 return factory(serviceProvider);
             }
-            throw new Exception($"No factory registered for ViewModel type {viewModelType.FullName}.");
+            return null;
         }
     }
 }

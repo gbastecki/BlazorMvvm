@@ -121,22 +121,17 @@ namespace BlazorMvvm.Generator.Generators
             sb.AppendLine("        }");
             sb.AppendLine("    }");
 
-            // Generate main entry point for executables (factory and cache)
-            if (compilation.Options.OutputKind == OutputKind.ConsoleApplication ||
-                compilation.Options.OutputKind == OutputKind.WindowsApplication ||
-                compilation.Options.OutputKind == OutputKind.WindowsRuntimeApplication)
-            {
-                sb.AppendLine();
-                sb.AppendLine("    internal static class BlazorMvvmViewModelFactoryExtensions");
-                sb.AppendLine("    {");
-                sb.AppendLine("        public static IServiceCollection UseBlazorMvvmViewModelFactory(this IServiceCollection services)");
-                sb.AppendLine("        {");
-                sb.AppendLine("            services.AddSingleton<IBlazorMvvmViewModelFactory, BlazorMvvmViewModelFactory>();");
-                sb.AppendLine("            services.AddScoped<BlazorMvvmScopedCache>();");
-                sb.AppendLine("            return services;");
-                sb.AppendLine("        }");
-                sb.AppendLine("    }");
-            }
+            // Generate main entry point (factory and cache)
+            sb.AppendLine();
+            sb.AppendLine("    internal static class BlazorMvvmViewModelFactoryExtensions");
+            sb.AppendLine("    {");
+            sb.AppendLine("        public static IServiceCollection UseBlazorMvvmViewModelFactory(this IServiceCollection services)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            services.AddSingleton<IBlazorMvvmViewModelFactory, BlazorMvvmViewModelFactory>();");
+            sb.AppendLine("            services.AddScoped<BlazorMvvmScopedCache>();");
+            sb.AppendLine("            return services;");
+            sb.AppendLine("        }");
+            sb.AppendLine("    }");
 
             sb.AppendLine("}");
 

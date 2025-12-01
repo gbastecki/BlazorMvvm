@@ -1,5 +1,10 @@
 ﻿# Changelog
 
+## [1.1.1]
+### Changed
+- `BlazorMvvmViewModelFactory` no longer throws an exception when trying to resolve a ViewModel that is not registered. Instead, it returns `null`.
+- `BlazorMvvmViewModelFactoryExtensions` is now generated for any `OutputKind`.
+
 ## [1.1.0]
 ### Added
 - `BlazorMvvmViewModelFactory` for resolving ViewModels.
