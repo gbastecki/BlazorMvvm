@@ -7,8 +7,8 @@ namespace BlazorMvvm;
 public abstract class BlazorMvvmComponentBase<TViewModel> : ComponentBase, IAsyncDisposable where TViewModel : IBlazorViewModel
 {
     [Inject] protected IServiceProvider ServiceProvider { get; set; } = default!;
-    [Inject] protected IBlazorMvvmViewModelFactory ViewModelFactory { get; set; } = default!;
-    [Inject] protected BlazorMvvmScopedCache ScopedCache { get; set; } = default!;
+    protected IBlazorMvvmViewModelFactory? ViewModelFactory { get; set; } = default!;
+    protected BlazorMvvmScopedCache? ScopedCache { get; set; } = default!;
 
     protected TViewModel? BaseViewModel;
     protected HashSet<string>? PropertyNamesHashset;
@@ -17,7 +17,11 @@ public abstract class BlazorMvvmComponentBase<TViewModel> : ComponentBase, IAsyn
     protected override void OnInitialized()
     {
         base.OnInitialized();
-        if (BaseViewModel == null)
+
+        ViewModelFactory = ServiceProvider.GetService(typeof(IBlazorMvvmViewModelFactory)) as IBlazorMvvmViewModelFactory;
+        ScopedCache = ServiceProvider.GetService(typeof(BlazorMvvmScopedCache)) as BlazorMvvmScopedCache;
+
+        if (BaseViewModel == null && ViewModelFactory != null && ScopedCache != null)
         {
             var vm = ViewModelFactory.GetViewModel(typeof(TViewModel), ServiceProvider, ScopedCache);
             if (vm != null)

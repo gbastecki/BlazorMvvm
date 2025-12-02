@@ -1,5 +1,9 @@
 ﻿# Changelog
 
+## [1.1.2]
+### Changed
+- `IBlazorMvvmViewModelFactory` and `BlazorMvvmScopedCache` registering in dependency injection via `builder.Services.UseBlazorMvvmViewModelFactory()` is now optional. `BlazorMvvmComponentBase` will not throw an exception if these are not registered.
+
 ## [1.1.1]
 ### Changed
 - `BlazorMvvmViewModelFactory` no longer throws an exception when trying to resolve a ViewModel that is not registered. Instead, it returns `null`.
