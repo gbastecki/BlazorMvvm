@@ -11,6 +11,9 @@
         [BlazorObservableProperty]
         private int counter3;
 
+        [BlazorObservableProperty(Name = "CustomPropertyName")]
+        private string? _customField;
+
         [BlazorObservableProperty]
         private string? _name;
 
@@ -89,6 +92,57 @@
         private void Sum(int a, int b)
         {
             Counter = a + b;
+        }
+
+        [BlazorObservableProperty]
+        private bool _isLoading;
+
+        [BlazorObservableProperty]
+        private int _loadingChangedCount;
+
+        [BlazorCommand(OnIsExecutingChangedCallback = nameof(OnLoadingChanged))]
+        private async Task LongRunningOperation()
+        {
+            await Task.Delay(50);
+            Counter++;
+        }
+
+        private void OnLoadingChanged(bool isExecuting)
+        {
+            IsLoading = isExecuting;
+            LoadingChangedCount++;
+        }
+
+        [BlazorCommand(OnIsExecutingChangedCallback = nameof(OnLoadingChanged), AllowConcurrentExecutions = false)]
+        private async Task LongRunningWithConcurrencyCheck()
+        {
+            await Task.Delay(50);
+            Counter++;
+        }
+
+        [BlazorObservableProperty]
+        private int _autoRefreshCount;
+
+        [BlazorCommand(autoRefreshOnIsExecutingChanged: true)]
+        private async Task AutoRefreshOperation()
+        {
+            await Task.Delay(50);
+            Counter++;
+        }
+
+        [BlazorObservableProperty]
+        private int _combinedCallbackCount;
+
+        [BlazorCommand(autoRefreshOnIsExecutingChanged: true, OnIsExecutingChangedCallback = nameof(OnCombinedCallback))]
+        private async Task CombinedCallbackOperation()
+        {
+            await Task.Delay(50);
+            Counter++;
+        }
+
+        private void OnCombinedCallback(bool isExecuting)
+        {
+            CombinedCallbackCount++;
         }
     }
 }

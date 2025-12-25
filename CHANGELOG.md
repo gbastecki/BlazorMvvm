@@ -1,5 +1,19 @@
 ﻿# Changelog
 
+## [1.2.0]
+### Added
+- `BlazorMessenger` implementation for communicating between recipients (Cross-ViewModel communication).
+- `BlazorMessengerAttribute` for source-generating messenger recipient registration code.
+- `BlazorCommandAttribute` now supports optional `OnIsExecutingChangedCallback` parameter to specify a callback method that will be invoked when the `IsExecuting` state changes.
+- `BlazorCommandAttribute` now supports optional `AutoRefreshOnIsExecutingChanged` parameter to automatically refresh the UI when the `IsExecuting` state changes.
+- `BlazorObservablePropertyAttribute` now supports optional `Name` parameter to specify a custom generated property name.
+- Unit tests for new features.
+
+### Changed
+- Reworked Demo project.
+- Reworked `README.md`.
+- Added `#nullable enable` to source generated files.
+
 ## [1.1.2]
 ### Changed
 - `IBlazorMvvmViewModelFactory` and `BlazorMvvmScopedCache` registering in dependency injection via `builder.Services.UseBlazorMvvmViewModelFactory()` is now optional. `BlazorMvvmComponentBase` will not throw an exception if these are not registered.

@@ -44,6 +44,25 @@ namespace BlazorMvvm.Tests.Tests
         }
 
         [TestMethod]
+        public void CustomPropertyNameTest()
+        {
+            TestViewModel vm = new()
+            {
+                CustomPropertyName = "Test Value"
+            };
+
+            bool notified = false;
+            vm.OnTriggerRefresh += (prop) =>
+            {
+                if (prop == nameof(vm.CustomPropertyName)) notified = true;
+            };
+            
+            vm.CustomPropertyName = "New Value";
+            Assert.IsTrue(notified);
+            Assert.AreEqual("New Value", vm.CustomPropertyName);
+        }
+
+        [TestMethod]
         public void CommandGenerationTest()
         {
             TestViewModel vm = new();
@@ -141,6 +160,122 @@ namespace BlazorMvvm.Tests.Tests
             TestViewModel vm = new();
             vm.SumCommand.Execute((5, 3));
             Assert.AreEqual(8, vm.Counter);
+        }
+
+        [TestMethod]
+        public async Task OnIsExecutingChangedCallbackTest()
+        {
+            TestViewModel vm = new();
+            Assert.IsFalse(vm.IsLoading);
+            Assert.AreEqual(0, vm.LoadingChangedCount);
+
+            vm.LongRunningOperationCommand.Execute();
+            await Task.Delay(10, TestContext.CancellationToken);
+
+            Assert.IsTrue(vm.IsLoading);
+            Assert.AreEqual(1, vm.LoadingChangedCount);
+
+            await Task.Delay(100, TestContext.CancellationToken);
+
+            Assert.IsFalse(vm.IsLoading);
+            Assert.AreEqual(2, vm.LoadingChangedCount);
+            Assert.AreEqual(1, vm.Counter);
+        }
+
+        [TestMethod]
+        public async Task OnIsExecutingChangedCallbackWithConcurrencyTest()
+        {
+            TestViewModel vm = new();
+
+            vm.LongRunningWithConcurrencyCheckCommand.Execute();
+            await Task.Delay(10, TestContext.CancellationToken);
+
+            Assert.IsTrue(vm.IsLoading);
+
+            await Task.Delay(100, TestContext.CancellationToken);
+
+            Assert.IsFalse(vm.IsLoading);
+        }
+
+        [TestMethod]
+        public void MessengerRegistration_GeneratesRegisterMethod()
+        {
+            MessengerTestViewModel vm = new();
+            BlazorMessenger messenger = new();
+
+            vm.RegisterMessenger(messenger);
+
+            Assert.IsTrue(messenger.IsRegistered<CounterChangedMessage>(vm));
+            Assert.IsTrue(messenger.IsRegistered<NameChangedMessage>(vm));
+        }
+
+        [TestMethod]
+        public void MessengerRegistration_ReceivesMessages()
+        {
+            MessengerTestViewModel vm = new();
+            BlazorMessenger messenger = new();
+            vm.RegisterMessenger(messenger);
+
+            messenger.Send(new CounterChangedMessage(42));
+            messenger.Send(new NameChangedMessage("Test"));
+
+            Assert.AreEqual(42, vm.Counter);
+            Assert.AreEqual("Test", vm.Name);
+            Assert.AreEqual(2, vm.MessageCount);
+        }
+
+        [TestMethod]
+        public void MessengerRegistration_UnregisterStopsMessages()
+        {
+            MessengerTestViewModel vm = new();
+            BlazorMessenger messenger = new();
+            vm.RegisterMessenger(messenger);
+
+            vm.UnregisterMessenger(messenger);
+            messenger.Send(new CounterChangedMessage(42));
+
+            Assert.AreEqual(0, vm.Counter);
+            Assert.AreEqual(0, vm.MessageCount);
+        }
+
+        [TestMethod]
+        public async Task AutoRefreshOnIsExecutingChanged_TriggersPropertyChanged()
+        {
+            TestViewModel vm = new();
+            int propertyChangedCount = 0;
+            vm.OnTriggerRefresh += _ => propertyChangedCount++;
+
+            vm.AutoRefreshOperationCommand.Execute();
+            await Task.Delay(10, TestContext.CancellationToken);
+
+            Assert.IsGreaterThanOrEqualTo(1, propertyChangedCount);
+
+            await Task.Delay(100, TestContext.CancellationToken);
+
+            Assert.IsGreaterThanOrEqualTo(2, propertyChangedCount);
+            Assert.AreEqual(1, vm.Counter);
+        }
+
+        [TestMethod]
+        public async Task AutoRefreshWithCallback_BothAreInvoked()
+        {
+            TestViewModel vm = new();
+            int propertyChangedCount = 0;
+            vm.OnTriggerRefresh += _ => propertyChangedCount++;
+
+            Assert.AreEqual(0, vm.CombinedCallbackCount);
+
+            vm.CombinedCallbackOperationCommand.Execute();
+            await Task.Delay(10, TestContext.CancellationToken);
+
+            Assert.IsGreaterThanOrEqualTo(1, propertyChangedCount);
+            Assert.AreEqual(1, vm.CombinedCallbackCount);
+
+            await Task.Delay(100, TestContext.CancellationToken);
+
+            Assert.IsGreaterThanOrEqualTo(2, propertyChangedCount);
+            Assert.AreEqual(2, vm.CombinedCallbackCount);
+            Assert.AreEqual(1, vm.Counter);
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using BlazorMvvm.Demo.JsHandlers;
 using BlazorMvvm.Demo.Pages.Components;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -14,12 +15,22 @@ namespace BlazorMvvm.Demo.Pages
         public readonly SvgHandler SvgHandler;
         public readonly List<RectangleViewModel> Rectangles = [];
 
+        public RectangleViewModel ActiveDragRect { get; set; }
+
         public readonly IBlazorAsyncCommand CreateRectanglesCommand;
+        public readonly IBlazorAsyncRelayCommand<MouseEventArgs> OnSvgMouseMoveCommand;
+        public readonly IBlazorAsyncRelayCommand<MouseEventArgs> OnSvgMouseUpCommand;
+        public readonly IBlazorAsyncRelayCommand<MouseEventArgs> OnSvgMouseLeaveCommand;
+
         public SvgWrapperViewModel(SvgHandler SvgHandler)
         {
             this.SvgHandler = SvgHandler;
             CreateRectanglesCommand = new BlazorAsyncCommand(CreateRectangles);
+            OnSvgMouseMoveCommand = new BlazorAsyncRelayCommand<MouseEventArgs>(OnSvgMouseMove);
+            OnSvgMouseUpCommand = new BlazorAsyncRelayCommand<MouseEventArgs>(OnSvgMouseUp);
+            OnSvgMouseLeaveCommand = new BlazorAsyncRelayCommand<MouseEventArgs>(OnSvgMouseLeave);
         }
+
         private Task CreateRectangles()
         {
             Rectangles.Clear();
@@ -28,6 +39,30 @@ namespace BlazorMvvm.Demo.Pages
                 Rectangles.Add(new RectangleViewModel(this));
             }
             OnPropertyChanged();
+            return Task.CompletedTask;
+        }
+
+        private async Task OnSvgMouseMove(MouseEventArgs e)
+        {
+            if (ActiveDragRect != null)
+            {
+                await ActiveDragRect.HandleMouseMove(e);
+            }
+        }
+
+        private async Task OnSvgMouseUp(MouseEventArgs e)
+        {
+            if (ActiveDragRect != null)
+            {
+                await ActiveDragRect.HandleMouseUp(e);
+                ActiveDragRect = null;
+            }
+        }
+
+        private Task OnSvgMouseLeave(MouseEventArgs e)
+        {
+            ActiveDragRect?.CancelDrag();
+            ActiveDragRect = null;
             return Task.CompletedTask;
         }
     }

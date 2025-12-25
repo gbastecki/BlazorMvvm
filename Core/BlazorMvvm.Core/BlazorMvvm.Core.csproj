@@ -3,11 +3,17 @@
 	<PropertyGroup>
 		<TargetFrameworks>net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
 		<Nullable>enable</Nullable>
+		
+		<IsTrimmable>true</IsTrimmable>
+		<EnableTrimAnalyzer>true</EnableTrimAnalyzer>
 		<TrimMode>full</TrimMode>
 		
-		<Version>1.1.2</Version>
-		<AssemblyVersion>1.1.2.0</AssemblyVersion>
-		<FileVersion>1.1.2.0</FileVersion>
+		<IsAotCompatible>true</IsAotCompatible>
+		<EnableAotAnalyzer Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net7.0'))">true</EnableAotAnalyzer>
+		
+		<Version>1.2.0</Version>
+		<AssemblyVersion>1.2.0.0</AssemblyVersion>
+		<FileVersion>1.2.0.0</FileVersion>
 
 		<IsPackable>true</IsPackable>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>

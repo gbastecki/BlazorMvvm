@@ -4,563 +4,560 @@
 [![NuGet version](https://img.shields.io/nuget/v/gbastecki.BlazorMvvm?color=6a00d5&label=nuget%20version&logo=nuget&style=plastic)](https://www.nuget.org/packages/gbastecki.BlazorMvvm/)
 [![NuGet downloads](https://img.shields.io/nuget/dt/gbastecki.BlazorMvvm?color=6a00d5&label=nuget%20downloads&logo=nuget&style=plastic)](https://www.nuget.org/packages/gbastecki.BlazorMvvm/)
 
-Use the MVVM pattern for Blazor with a simple and lightweight library.
+A lightweight, AOT-compatible MVVM toolkit for Blazor with powerful source generation capabilities.
 
-## Quick start
+[NuGet Package](https://www.nuget.org/packages/gbastecki.BlazorMvvm) | [Live Demo](https://gbastecki.github.io/BlazorMvvm/)
 
-This library is distributed via [NuGet](https://www.nuget.org/packages/gbastecki.BlazorMvvm).
+---
 
-Check [Live Demo](https://gbastecki.github.io/BlazorMvvm/).
+## Table of Contents
 
-## Usage
+- [Package requirements](#package-requirements)
+- [Quick Start](#quick-start)
+- [Core Features](#core-features)
+  - [Observable Properties](#-observable-properties)
+  - [Commands](#-commands)
+  - [ObservableComponent](#-observablecomponent)
+  - [BlazorMessenger](#-blazormessenger)
+  - [ViewModelFactory](#-viewmodelfactory)
+- [Key Highlights](#key-highlights)
+- [Command Attribute Quick Reference](#command-attribute-quick-reference)
+- [License](#license)
+- [Third-Party Libraries](#third-party-libraries)
+- [See it in action](#see-it-in-action)
 
-BlazorMvvm provides a lightweight set of base classes and components to implement the Model-View-ViewModel (MVVM) pattern in Blazor applications.
+---
 
-This guide outlines the core components and their usage.
+## Package requirements
+This package uses [`Microsoft.AspNetCore.Components.Web`](https://www.nuget.org/packages/Microsoft.AspNetCore.Components.Web/) package. The required version depends on your target .NET version:
 
-##
-### ViewModel
+| .NET Version | Required Package |
+|--------------|------------------|
+| .NET 10.0 | `Microsoft.AspNetCore.Components.Web` ≥ 10.0.0 |
+| .NET 9.0 | `Microsoft.AspNetCore.Components.Web` ≥ 9.0.0 |
+| .NET 8.0 | `Microsoft.AspNetCore.Components.Web` ≥ 8.0.0 |
+| .NET 7.0 | `Microsoft.AspNetCore.Components.Web` ≥ 7.0.0 |
+| .NET 6.0 | `Microsoft.AspNetCore.Components.Web` ≥ 6.0.0 |
 
-Viewmodels encapsulate the application's presentation logic and state. In BlazorMvvm, your viewmodels must inherit from the `BlazorViewModel` base class.
+---
 
-This base class implements `IBlazorViewModel`, which is essential for notifying the UI when a property's value has changed.
+## Quick Start
 
-Example: `HomeViewModel.cs`
-```c#
-using BlazorMvvm;
-
-namespace YourNamespace;
-
-public class HomeViewModel : BlazorViewModel
-{
-    // --- Option 1: Manual Property Notification ---
-    
-    private int _counter;
-    public int Counter
-    {
-        get => _counter;
-        set
-        {
-            // Manual equality check
-            if (_counter == value) return;
-            
-            _counter = value;
-            
-            // Manually raise the OnPropertyChanged event
-            // This will trigger the UI to refresh
-            base.OnPropertyChanged(); 
-        }
-    }
-
-    // --- Option 2: Using the Set<T> Helper ---
-    
-    private int _counter2;
-    public int Counter2
-    {
-        get => _counter2;
-        
-        // The Set() helper method simplifies this pattern:
-        // 1. It performs an equality check.
-        // 2. If the value is new, it updates the backing field.
-        // 3. It raises the OnPropertyChanged event.
-        set => Set(ref _counter2, value);
-    }
-
-    // --- Command example ---
-    
-    private void IncrementCounter()
-    {
-        Counter++;
-    }
-    private IBlazorCommand _incrementCounterCommand;
-    public IBlazorCommand IncrementCounterCommand => _incrementCounterCommand ??= new BlazorCommand(IncrementCounter);
-}
+### 1. Install the package
+```shell
+dotnet add package gbastecki.BlazorMvvm
 ```
 
-Example: `HomeViewModel.cs` with Source Generation
-```c#
-using BlazorMvvm;
+### 2. Add package reference
 
-namespace YourNamespace;
-
-public partial class HomeViewModel : BlazorViewModel //class must be partial
-{
-    [BlazorObservableProperty]
-    private int _counter;
-    // Generates:
-    // public int Counter
-    // {
-    //     get => _counter;
-    //     set => Set(ref _counter, value);
-    // }
-
-    [BlazorObservableProperty]
-    private int _counter2;
-    // Generates:
-    // public int Counter2
-    // {
-    //     get => _counter2;
-    //     set => Set(ref _counter2, value);
-    // }
-
-    [BlazorCommand]
-    private void IncrementCounter()
-    {
-        Counter++;
-    }
-    // Generates:
-    // private BlazorMvvm.IBlazorCommand _incrementCounterCommand;
-    // public BlazorMvvm.IBlazorCommand IncrementCounterCommand => _incrementCounterCommand ??= new BlazorMvvm.BlazorCommand(IncrementCounter);
-}
+```xml
+<PackageReference Include="gbastecki.BlazorMvvm" Version="*" />
 ```
 
-##
-### ComponentBase
-
-To bind a view (Blazor Component) to a viewmodel, your components should inherit from `BlazorMvvmComponentBase<T>`, where `T` is the type of your viewmodel.
-
-The final step is to connect your viewmodel instance to the component by calling `SetDataContext()` in the component's `OnInitialized` lifecycle method. This subscribes the component to the viewmodel's `PropertyChanged` events, automatically triggering `StateHasChanged()` to re-render the component when a property is updated.
-
-Example: `Home.razor`
-```razor
-@using BlazorMvvm
-@inherits BlazorMvvmComponentBase<HomeViewModel>
-```
-
-Example: `Home.razor.cs`
-```c#
-using BlazorMvvm;
-
-namespace YourNamespace;
-
-public partial class Home : BlazorMvvmComponentBase<HomeViewModel>
-{
-    // Instantiate the ViewModel
-    HomeViewModel ViewModel = new();
-
-    protected override void OnInitialized()
-    {
-        // Set the DataContext to link the View and ViewModel.
-        // This is the essential step for enabling data binding.
-        SetDataContext(ViewModel);
-        
-        base.OnInitialized();
-    }
-}
-```
-
-##
-### ObservableComponent
-By default, when a viewmodel property changes, the entire component bound via `SetDataContext` is re-rendered. For complex UIs, this can be inefficient.
-
-The `ObservableComponent` allows you to define fine-grained "observable" fragments within your component. These fragments can be bound to a viewmodel and will only re-render when specific properties change, isolating the UI update.
-
-#### Usage
-
-- **Full Update**: Pass a `ViewModel` instance. The `ObservableComponent`'s child content will re-render for any property change on that viewmodel.
-
-- **Selective Update**: Pass a `ViewModel` and a `PropertyNames` array. The child content will only re-render when one of the specified properties raises its `OnPropertyChanged` event.
-
-Example: `Home.razor`
-```razor
-@using BlazorMvvm
-@inherits BlazorMvvmComponentBase<HomeViewModel>
-
-<!-- 
-  This fragment binds to ObservablePartViewModel and will
-  refresh when ANY property on it changes.
--->
-<ObservableComponent ViewModel="ObservablePartViewModel">
-    <div>ObservableComponent current counter: @ObservablePartViewModel.Counter</div>
-</ObservableComponent>
-
-<!-- 
-  This fragment binds to SharedObservableViewModel but will ONLY
-  refresh when 'Counter1' changes.
--->
-<ObservableComponent ViewModel="SharedObservableViewModel" PropertyNames="[nameof(SharedObservableViewModel.Counter1)]">
-    <div>SharedObservableViewModel current counter 1: @SharedObservableViewModel.Counter1</div>
-</ObservableComponent>
-
-<!-- 
-  This fragment also binds to SharedObservableViewModel but will ONLY
-  refresh when 'Counter2' or 'Counter3' changes.
-  A change to 'Counter1' will not affect this fragment.
--->
-<ObservableComponent ViewModel="SharedObservableViewModel" PropertyNames="[nameof(SharedObservableViewModel.Counter2), nameof(SharedObservableViewModel.Counter3)]">
-    <div>SharedObservableViewModel current counter 2: @SharedObservableViewModel.Counter2</div>
-    <div>SharedObservableViewModel current counter 3: @SharedObservableViewModel.Counter3</div>
-</ObservableComponent>
-```
-
-Example: `Home.razor.cs`
-```c#
-using BlazorMvvm;
-using Microsoft.AspNetCore.Components;
-
-namespace YourNamespace;
-
-public class ObservablePartViewModel : BlazorViewModel { /* ... */ }
-public class SharedObservableViewModel : BlazorViewModel { /* ... */ }
-
-public partial class Home : BlazorMvvmComponentBase<HomeViewModel>
-{
-    // Main ViewModel for the component
-    HomeViewModel ViewModel = new();
-    
-    // ViewModels for the observable fragments
-    ObservablePartViewModel ObservablePartViewModel = new();
-    SharedObservableViewModel SharedObservableViewModel = new();
-    
-    protected override void OnInitialized()
-    {
-        // The main viewmodel is set as the primary DataContext
-        SetDataContext(ViewModel);
-        base.OnInitialized();
-    }
-}
-```
-
-##
-### Commands
-BlazorMvvm provides `Command` implementations that allow you to bind UI actions (like `@onclick`) to methods on your viewmodel, while also managing execution state (e.g., disabling a button while an async task is running).
-
-#### Available Implementations
-
-1. **Parameterless:**
-
-    - `BlazorCommand(Action execute, Func<bool>? canExecute = null)`
-
-    - `BlazorAsyncCommand(Func<Task> execute, Func<Task<bool>>? canExecute = null, bool allowConcurrentExecutions = false)`
-
-2. **Generic (Type-Safe Parameter):**
-
-    - `BlazorRelayCommand<T>(Action<T> execute, Func<T, bool>? canExecute = null)`
-
-    - `BlazorAsyncRelayCommand<T>(Func<T, Task> execute, Func<T, Task<bool>>? canExecute = null, bool allowConcurrentExecutions = false)`
-
-3. **Object-based Parameter:**
-
-    - `BlazorRelayCommand(Action<object[]?> execute, Func<object[]?, bool>? canExecute = null)`
-
-    - `BlazorAsyncRelayCommand(Func<object[]?, Task> execute, Func<object[]?, Task<bool>>? canExecute = null, bool allowConcurrentExecutions = false)`
-
-#### Key Features
-
-- `canExecute`: An optional delegate that determines if the command is allowed to run.
-
-- `IsExecuting` (Async only): A `bool` property that is `true` while the `execute` task is running.
-
-- `allowConcurrentExecutions` (Async only): If `false` (the default), prevents the command from executing if it `IsExecuting`.
-
-- `OnIsExecutingChanged` (Async only): An event raised when `IsExecuting` changes. You must subscribe to this and call `OnPropertyChanged()` to notify the UI to update.
-
-Example: `ButtonExampleViewModel.cs`
-
-This example demonstrates an async command that disables a button for 5 seconds. It implements IDisposable to safely unsubscribe from the event handler.
-```c#
-using BlazorMvvm;
-using System;
-using System.Threading.Tasks;
-
-namespace YourNamespace;
-
-public class ButtonExampleViewModel : BlazorViewModel, IDisposable
-{
-    public IBlazorAsyncCommand DisableButtonCommand { get; }
-
-    public ButtonExampleViewModel()
-    {
-        // Initialize the command, passing the method to execute
-        DisableButtonCommand = new BlazorAsyncCommand(DisableButton);
-        
-        // Subscribe to the event to update the UI
-        DisableButtonCommand.OnIsExecutingChanged += DisableButtonCommand_OnIsExecutingChanged;
-    }
-
-    private async Task DisableButton()
-    {
-        // Simulate a long-running operation
-        await Task.Delay(5000);
-    }
-
-    private void DisableButtonCommand_OnIsExecutingChanged(bool isExecuting)
-    {
-        // Notify the UI that the command's state has changed
-        // This allows the button's 'disabled' attribute to update
-        base.OnPropertyChanged(nameof(DisableButtonCommand));
-    }
-
-    // Implement IDisposable to clean up event subscriptions
-    public void Dispose()
-    {
-        DisableButtonCommand.OnIsExecutingChanged -= DisableButtonCommand_OnIsExecutingChanged;
-    }
-}
-```
-
-Example: `.razor` Component
-
-This component hosts the `ButtonExampleViewModel` inside an `ObservableComponent` to ensure the button state updates correctly.
-```razor
-@using BlazorMvvm
-@inherits BlazorMvvmComponentBase<HomeViewModel>
-
-<ObservableComponent ViewModel="ButtonExampleViewModel">
-    <button 
-        @onclick="ButtonExampleViewModel.DisableButtonCommand.Execute" 
-        disabled="@ButtonExampleViewModel.DisableButtonCommand.IsExecuting">
-        
-        Disable button for 5 seconds
-    </button>
-</ObservableComponent>
-
-@code {
-    ButtonExampleViewModel ButtonExampleViewModel = new();
-
-    protected override void OnDispose()
-    {
-        ButtonExampleViewModel.Dispose();
-        base.OnDispose();
-    }
-}
-```
-
-##
-### ViewModelFactory
-
-The `BlazorMvvmViewModelFactory` is responsible for resolving and providing instances of ViewModels with support for different lifetimes.
-
-#### Features
-
-- **Automatic Dependency Injection**: ViewModels can be automatically registered and injected.
-- **Lazy Loading support**: Works seamlessly with lazy-loaded assemblies.
-- **AOT & Trimming compatible**: Uses Source Generators and Module Initializers to avoid runtime reflection, making it fully compatible with AOT and Trimming.
-- **Flexible lifetimes**: Support for `Transient`, `Scoped`, and `Singleton` ViewModels.
-- **Constructor Selection**: Ability to specify which constructor to use when multiple constructors are present.
-- **Service Injection**: Supports constructor injection for services registered in the DI container.
-- **Integration with BlazorMvvmComponentBase**: Automatically resolves and injects ViewModels into components.
-
-
-#### Setup
-To use automatic dependency injection for registered ViewModels, in your main `Program.cs`, add the following line to register the BlazorMvvm ViewModelFactory:
-```c#
+### 3. Register ViewModelFactory (optional, for ViewModel DI)
+```csharp
+// Program.cs
 builder.Services.UseBlazorMvvmViewModelFactory();
 ```
 
-#### Registering ViewModels
-To register a ViewModel with the `BlazorMvvmViewModelFactory`, decorate the ViewModel class with the `[BlazorMvvmViewModel]` attribute, specifying the desired lifetime.
-
-```c#
-[BlazorMvvmViewModel(ViewModelLifetime.Singleton)]
-public class HomeViewModel : BlazorViewModel { ... }
-```
-
-#### ViewModelFactory parameters injection
-You can also register services that your ViewModels depend on in the DI container as usual, to make them available for constructor injection.
-```c#
-builder.Services.AddSingleton<IService, ServiceImplementation>();
-```
-
-Then, you can declare constructor parameters in your ViewModel, and they will be automatically injected when the ViewModel is resolved.
-```c#
-[BlazorMvvmViewModel(ViewModelLifetime.Singleton)]
-public class HomeViewModel : BlazorViewModel 
-{
-    private readonly IService _service;
-    public HomeViewModel(IService service) 
-    {
-        _service = service;
-    }
-}
-```
-
-#### ViewModelFactory constructor selection
-If your ViewModel has multiple constructors, you can specify which constructor should be used by decorating it with the `[BlazorMvvmViewModelFactoryConstructor]` attribute.
-```c#
-[BlazorMvvmViewModel(ViewModelLifetime.Singleton)]
-public class HomeViewModel : BlazorViewModel 
-{
-    private readonly IService _service;
-    public HomeViewModel() 
-    {
-    }
-    // This constructor will be used by the ViewModelFactory
-    [BlazorMvvmViewModelFactoryConstructor]
-    public HomeViewModel(IService service) 
-    {
-        _service = service;
-    }
-}
-```
-
-#### ViewModel lifetimes initialized via ViewModelFactory
-You can control the lifetime of your ViewModels using the attribute:
-
-- `[BlazorMvvmViewModel(ViewModelLifetime.Transient)]`: Created every time it's requested (Default).
-- `[BlazorMvvmViewModel(ViewModelLifetime.Scoped)]`: Created once per scope.
-- `[BlazorMvvmViewModel(ViewModelLifetime.Singleton)]`: Created once per application.
-
-#### Using ViewModelFactory in components
-When using the `BlazorMvvmViewModelFactory`, you can retrieve ViewModel instances via dependency injection.
-
-There is no need to call `SetDataContext()` manually, as the base class will do it for you.
-
-Example: `Home.razor.cs` with ViewModelFactory registration
-```c#
-using BlazorMvvm;
-
-namespace YourNamespace;
-
-public partial class Home : BlazorMvvmComponentBase<HomeViewModel>
-{
-    // ViewModel will be resolved and injected automatically if registered with [BlazorMvvmViewModelAttribute].
-    // No need to instantiate it manually.
-    // It can be accessed via BaseViewModel property inherited from BlazorMvvmComponentBase<T>.
-    // OnInitialized will call SetDataContext automatically.
-    // Just make sure to call base.OnInitialized() if overriding OnInitialized.
-    protected override void OnInitialized()
-    {
-        base.OnInitialized();
-    }
-}
-```
-
-##
-### Source generation for properties and commands
-
-#### Features
-
-- **Automatic property generation**: Convert fields into observable properties with `[BlazorObservableProperty]`.
-- **Commands generation**: Generate `Commands` implementations from methods with `[BlazorCommand]`.
-- **Async support**: Support for both `Task` and `ValueTask` in commands.
-- **Flexible CanExecute**: Support for synchronous and asynchronous `CanExecute` methods.
-- **Parameter support**: Handle parameterless methods, single parameters, and multiple parameters (using Tuples).
-- **Concurrency control**: Configure concurrent execution behavior for async commands.
-
-#### Observable Properties
-
-Decorate a private field with `[BlazorObservableProperty]` to generate a public property with change notification.
-
-ViewModel classes must be declared as `partial` to use this feature.
-
-The generator assumes the field is named either `lowerCamel`, `_lowerCamel` or `m_lowerCamel`, and it will transform that to be `UpperCamel`.
-
-```c#
+### 4. Create a ViewModel
+```csharp
+[BlazorMvvmViewModel(ViewModelLifetime.Transient)]
 public partial class CounterViewModel : BlazorViewModel
 {
     [BlazorObservableProperty]
     private int _count;
 
-    // Generates:
-    // public int Count
-    // {
-    //     get => _count;
-    //     set => Set(ref _count, value);
-    // }
+    [BlazorCommand]
+    private void Increment() => Count++;
 }
 ```
 
-#### Commands
-Decorate a method with `[BlazorCommand]` to generate a proper `Command`.
+### 5. Create a Component
+```razor
+@inherits BlazorMvvmComponentBase<CounterViewModel>
+@page "/counter"
 
-##### Synchronous Command
+<h1>Count: @BaseViewModel.Count</h1>
+<button @onclick="BaseViewModel.IncrementCommand.Execute">+1</button>
+```
 
-```c#
-[BlazorCommand]
-private void Increment()
+---
+
+## Core Features
+
+### Observable Properties
+
+Convert private fields into observable properties with automatic change notification.
+
+#### Source Generation (Recommended)
+```csharp
+public partial class MyViewModel : BlazorViewModel
 {
-    Count++;
+    [BlazorObservableProperty]
+    private string _name;
+    
+    [BlazorObservableProperty]
+    private int _counter;
+    
+    [BlazorObservableProperty(Name = "CustomName")]
+    private string _internalField;
 }
-
-// Generates: public IBlazorCommand IncrementCommand { get; }
 ```
 
-##### Asynchronous Command
+**Generates:**
+```csharp
+public string Name
+{
+    get => _name;
+    set => Set(ref _name, value);
+}
 
-Supports both `Task` and `ValueTask`.
+public int Counter
+{
+    get => _counter;
+    set => Set(ref _counter, value);
+}
 
-```c#
+public string CustomName
+{
+    get => _internalField;
+    set => Set(ref _internalField, value);
+}
+```
+
+#### Manual Implementation
+```csharp
+public class MyViewModel : BlazorViewModel
+{
+    private int _counter;
+    public int Counter
+    {
+        get => _counter;
+        set => Set(ref _counter, value); // Automatically notifies UI
+        
+        // or use manual setter:
+        //set
+        //{
+        //    if (_counter == value) return;
+        //    _counter = value;
+        //    OnPropertyChanged(nameof(Counter));
+        //}
+    }
+}
+```
+
+---
+
+### Commands
+
+Bind UI actions to ViewModel methods with built-in execution state management.
+
+#### Synchronous Commands
+```csharp
+[BlazorCommand]
+private void Save() => SaveData();
+
+// Generated: public IBlazorCommand SaveCommand { get; }
+```
+
+#### Async Commands
+```csharp
 [BlazorCommand]
 private async Task LoadDataAsync()
 {
     await Task.Delay(1000);
-    // ...
 }
 
-// Generates: public IBlazorAsyncCommand LoadDataAsyncCommand { get; }
+// Generated: public IBlazorAsyncCommand LoadDataAsyncCommand { get; }
 ```
 
-##### Command with Parameter
-
-```c#
+#### Commands with Parameters
+```csharp
+// Single parameter
 [BlazorCommand]
-private void UpdateMessage(string message)
-{
-    Message = message;
-}
+private void UpdateName(string name) => Name = name;
+// Generated: public IBlazorRelayCommand<string> UpdateNameCommand { get; }
 
-// Generates: public IBlazorRelayCommand<string> UpdateMessageCommand { get; }
-```
-
-##### Command with Multiple Parameters
-
-Methods with multiple parameters are wrapped using a Tuple.
-
-```c#
+// Multiple parameters (uses tuple)
 [BlazorCommand]
-private void Add(int a, int b)
-{
-    Count = a + b;
-}
-
-// Generates: public IBlazorRelayCommand<(int, int)> AddCommand { get; }
-// Usage in View: <button @onclick="() => AddCommand.Execute((5, 10))"></button>
+private void Add(int a, int b) => Total = a + b;
+// Generated: public IBlazorRelayCommand<(int, int)> AddCommand { get; }
+// Usage: AddCommand.Execute((5, 10))
 ```
 
 #### CanExecute Logic
+```csharp
+[BlazorCommand(CanExecute = nameof(CanSave))]
+private void Save() => SaveData();
 
-You can specify a method to control command execution using the `CanExecute` parameter (via constructor argument or property).
-
-##### Synchronous CanExecute
-
-```c#
-[BlazorCommand(CanExecute = nameof(CanIncrement))]
-private void Increment() => Count++;
-
-private bool CanIncrement() => Count < 10;
-```
-
-##### Asynchronous CanExecute
-
-The source generator automatically handles wrapping synchronous predicates for async commands, or you can use async predicates.
-
-```c#
-[BlazorCommand(nameof(CanDoAsync))]
-private async Task DoAsync() { ... }
-
-// Can be synchronous bool
-// private bool CanDoAsync() => true;
-
-// Or asynchronous
-private async Task<bool> CanDoAsync() 
-{
-    // ...
-    return true;
-}
+private bool CanSave() => !string.IsNullOrEmpty(Name);
 ```
 
 #### Concurrency Control
-
-For async commands, you can control whether multiple executions are allowed simultaneously.
-
-```c#
-// Prevent concurrent executions (default is false)
+```csharp
 [BlazorCommand(AllowConcurrentExecutions = false)]
 private async Task SubmitAsync()
 {
-    // ...
+    // Prevents multiple concurrent executions
 }
 ```
 
-##
+#### Auto-Refresh on IsExecuting Changed
+Automatically trigger UI refresh when `IsExecuting` state changes
+
+```csharp
+[BlazorCommand(autoRefreshOnIsExecutingChanged: true)]
+private async Task LoadDataAsync()
+{
+    await Task.Delay(5000);
+}
+```
+
+```razor
+<button @onclick="ViewModel.LoadDataAsyncCommand.Execute"
+        disabled="@ViewModel.LoadDataAsyncCommand.IsExecuting">
+    @if (ViewModel.LoadDataAsyncCommand.IsExecuting)
+    {
+        <span>Loading...</span>
+    }
+    else
+    {
+        <span>Loaded Data</span>
+    }
+</button>
+```
+
+#### Custom Callback on IsExecuting Changed
+```csharp
+[BlazorObservableProperty]
+private bool _isLoading;
+
+[BlazorCommand(OnIsExecutingChangedCallback = nameof(OnLoadingChanged))]
+private async Task SaveAsync() => await SaveDataAsync();
+
+private void OnLoadingChanged(bool isExecuting)
+{
+    IsLoading = isExecuting;
+    // Additional logic here
+}
+```
+
+#### Combined: Auto-Refresh + Custom Callback
+```csharp
+[BlazorCommand(autoRefreshOnIsExecutingChanged: true, OnIsExecutingChangedCallback = nameof(OnSaving))]
+private async Task SaveAsync() => await SaveDataAsync();
+
+private void OnSaving(bool isExecuting)
+{
+    // Custom logic runs AFTER OnPropertyChanged() is called
+    _logger.Log($"Saving state: {isExecuting}");
+}
+```
+
+---
+
+### ObservableComponent
+
+Optimize UI updates by isolating which parts of your component re-render.
+
+#### Full Update Mode
+Re-renders when ANY property on the ViewModel changes:
+```razor
+<ObservableComponent ViewModel="MyViewModel">
+    <p>Name: @MyViewModel.Name</p>
+    <p>Count: @MyViewModel.Count</p>
+</ObservableComponent>
+```
+
+#### Selective Update Mode
+Re-renders ONLY when specified properties change:
+```razor
+<!-- Only updates when Counter1 changes -->
+<ObservableComponent ViewModel="SharedVM" 
+    PropertyNames="[nameof(SharedVM.Counter1)]">
+    <p>Counter1: @SharedVM.Counter1</p>
+</ObservableComponent>
+
+<!-- Only updates when Counter2 or Counter3 changes -->
+<ObservableComponent ViewModel="SharedVM" 
+    PropertyNames="[nameof(SharedVM.Counter2), nameof(SharedVM.Counter3)]">
+    <p>Counter2: @SharedVM.Counter2</p>
+    <p>Counter3: @SharedVM.Counter3</p>
+</ObservableComponent>
+```
+
+---
+
+### BlazorMessenger
+
+Cross-ViewModel communication with weak reference support for automatic cleanup.
+
+#### Messenger Setup
+
+Choose between Dependency Injection or static singleton access:
+
+```csharp
+// Option 1: Dependency Injection (Recommended)
+// Program.cs
+builder.Services.AddSingleton<IBlazorMessenger, BlazorMessenger>();
+
+// ViewModel - Inject via constructor
+public class MyViewModel : BlazorViewModel
+{
+    private readonly IBlazorMessenger _messenger;
+    
+    public MyViewModel(IBlazorMessenger messenger)
+    {
+        _messenger = messenger;
+    }
+}
+
+// Option 2: Static Singleton
+// No registration needed - access directly
+BlazorMessenger.Default.Send(new MyMessage());
+```
+
+#### Define Messages
+```csharp
+// Simple value message
+public class CounterChangedMessage : ValueChangedMessage<int>
+{
+    public CounterChangedMessage(int value) : base(value) { }
+}
+
+// Request/Response message
+public class GetUserRequest : RequestMessage<User> { }
+```
+
+#### Send Messages
+```csharp
+// Via injected messenger
+_messenger.Send(new CounterChangedMessage(42));
+
+// Via static default instance
+BlazorMessenger.Default.Send(new CounterChangedMessage(42));
+```
+
+#### Complete Receiver Pattern (Recommended)
+
+Register in constructor, unregister in Dispose to prevent memory leaks:
+
+```csharp
+[BlazorMessenger]
+public partial class ReceiverViewModel : BlazorViewModel,
+    IBlazorRecipient<CounterChangedMessage>, IDisposable
+{
+    private readonly IBlazorMessenger _messenger;
+    
+    [BlazorObservableProperty]
+    private int _counter;
+
+    // Register in constructor - starts listening
+    public ReceiverViewModel(IBlazorMessenger messenger)
+    {
+        _messenger = messenger;
+        RegisterMessenger(_messenger); // Generated method
+    }
+
+    // Unregister in Dispose - stops listening, prevents leaks
+    public void Dispose()
+    {
+        UnregisterMessenger(_messenger); // Generated method
+    }
+
+    public void Receive(CounterChangedMessage message)
+    {
+        Counter = message.Value;
+    }
+}
+```
+
+#### Manual Registration (Without Source Generation)
+```csharp
+public class ReceiverViewModel : BlazorViewModel,
+    IBlazorRecipient<CounterChangedMessage>, IDisposable
+{
+    private readonly IBlazorMessenger _messenger;
+
+    public ReceiverViewModel(IBlazorMessenger messenger)
+    {
+        _messenger = messenger;
+        _messenger.Register<CounterChangedMessage>(this);
+    }
+
+    public void Dispose()
+    {
+        _messenger.Unregister<CounterChangedMessage>(this);
+    }
+
+    public void Receive(CounterChangedMessage message) { }
+}
+```
+
+#### Strong vs Weak Reference Messenger
+
+| Feature | `BlazorMessenger` | `BlazorStrongMessenger` |
+|---------|-------------------|------------------------|
+| Reference Type | Weak | Strong |
+| GC Behavior | Recipients auto-collected | Recipients kept alive |
+| Memory Leaks | Forgiving if you forget Dispose | Must unregister manually |
+| Use Case | Most scenarios (default) | Guaranteed delivery |
+
+```csharp
+// Use weak messenger (default) - safer for most cases
+builder.Services.AddSingleton<IBlazorMessenger, BlazorMessenger>();
+
+// Use strong messenger - guaranteed delivery, explicit lifecycle
+builder.Services.AddSingleton<IBlazorMessenger, BlazorStrongMessenger>();
+```
+
+#### Channel Tokens
+
+Isolate communication using channel tokens (any `IEquatable<T>` type):
+
+##### String Channels
+```csharp
+// Register on specific channel
+messenger.Register<MyMessage, string>(this, "channel-a",
+    (r, m) => ((MyReceiver)r).OnMessage(m));
+
+// Send to that channel only
+messenger.Send(new MyMessage(), "channel-a");
+
+// Unregister from channel
+messenger.Unregister<MyMessage, string>(this, "channel-a");
+```
+
+##### Enum Channels (via int)
+```csharp
+// Note: Enums don't implement IEquatable<T>, so cast to int
+public enum NotificationChannel { System = 0, User = 1, Debug = 2 }
+
+// Register on channel
+messenger.Register<LogMessage, int>(this, (int)NotificationChannel.Debug,
+    (r, m) => ((LogReceiver)r).OnLog(m));
+
+// Send to channel
+messenger.Send(new LogMessage("msg"), (int)NotificationChannel.Debug);
+```
+
+#### Request/Response Pattern
+```csharp
+// Register handler
+messenger.Register<GetUserRequest>(this, (r, m) =>
+{
+    m.Reply(new User("John"));
+});
+
+// Send and get response
+User user = messenger.Send(new GetUserRequest());
+```
+
+---
+
+### ViewModelFactory
+
+Automatic dependency injection for ViewModels with configurable lifetimes.
+
+#### Setup
+```csharp
+// Program.cs
+builder.Services.UseBlazorMvvmViewModelFactory();
+```
+
+#### Register ViewModels
+```csharp
+[BlazorMvvmViewModel(ViewModelLifetime.Singleton)]
+public partial class AppViewModel : BlazorViewModel { }
+
+[BlazorMvvmViewModel(ViewModelLifetime.Scoped)]
+public partial class PageViewModel : BlazorViewModel { }
+
+[BlazorMvvmViewModel(ViewModelLifetime.Transient)]
+public partial class DialogViewModel : BlazorViewModel { }
+```
+
+#### Constructor Injection
+```csharp
+[BlazorMvvmViewModel(ViewModelLifetime.Scoped)]
+public partial class HomeViewModel : BlazorViewModel
+{
+    private readonly IApiService _api;
+    private readonly ILogger _logger;
+
+    public HomeViewModel(IApiService api, ILogger logger)
+    {
+        _api = api;
+        _logger = logger;
+    }
+}
+```
+
+#### Constructor Selection
+```csharp
+[BlazorMvvmViewModel(ViewModelLifetime.Scoped)]
+public partial class MyViewModel : BlazorViewModel
+{
+    public MyViewModel() { }
+
+    [BlazorMvvmViewModelFactoryConstructor] // Use this constructor
+    public MyViewModel(IService service) { }
+}
+```
+
+#### Component Usage
+```csharp
+public partial class Home : BlazorMvvmComponentBase<HomeViewModel>
+{
+    // ViewModel is automatically resolved and injected via BaseViewModel
+    // No need for manual SetDataContext()
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        // BaseViewModel is ready to use!
+    }
+}
+```
+
+---
+
+## Key Highlights
+
+| Feature | Benefit |
+|---------|---------|
+| **Source Generation** | Zero runtime reflection, AOT-ready |
+| **Trimming Safe** | Works with .NET trimmer |
+| **Weak References** | Automatic memory cleanup in messenger |
+| **Selective Updates** | Fine-grained UI re-rendering |
+| **Auto-Refresh** | No boilerplate for loading states |
+| **Multiple Parameters** | Tuple support for complex commands |
+| **Channel Tokens** | Isolated message channels |
+| **Request/Response** | Synchronous messaging pattern |
+
+---
+
+## Command Attribute Quick Reference
+
+```csharp
+[BlazorCommand]                                    // Basic command
+[BlazorCommand(CanExecute = nameof(CanExecute))]   // With validation
+[BlazorCommand(AllowConcurrentExecutions = true)]  // Allow parallel execution
+[BlazorCommand(autoRefreshOnIsExecutingChanged: true)]  // Auto UI refresh
+[BlazorCommand(OnIsExecutingChangedCallback = nameof(Callback))]  // Custom callback
+[BlazorCommand(autoRefreshOnIsExecutingChanged: true, OnIsExecutingChangedCallback = nameof(Callback))]  // Both combined
+```
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Third-Party Libraries
+
+See the [NOTICE](NOTICE) file for attribution information.
+
+## See it in action
+
+**[BarcodeTool](https://github.com/gbastecki/BarcodeTool)** | [Demo](https://gbastecki.github.io/BarcodeTool/) — A production app built with BlazorMvvm, featuring barcode generation and scanning.

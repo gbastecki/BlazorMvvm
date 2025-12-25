@@ -1,16 +1,23 @@
-﻿using BlazorMvvm;
-using BlazorMvvm.Demo.JsHandlers;
+﻿using BlazorMvvm.Demo.JsHandlers;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
+using System.Threading.Tasks;
 
 namespace BlazorMvvm.Demo.Pages
 {
     public partial class Home : BlazorMvvmComponentBase<HomeViewModel>
     {
         [Inject] SvgHandler SvgHandler { get; set; }
+        [Inject] IJSRuntime JS { get; set; }
+        [Inject] IBlazorMessenger Messenger { get; set; }
+
         ObservablePartViewModel ObservablePartViewModel;
         SharedObservableViewModel SharedObservableViewModel;
         ButtonExampleViewModel ButtonExampleViewModel;
         SvgWrapperViewModel SvgWrapperViewModel;
+
+        MessengerSenderViewModel MessengerSender;
+        MessengerReceiverViewModel MessengerReceiver;
 
         protected override void OnInitialized()
         {
@@ -18,7 +25,20 @@ namespace BlazorMvvm.Demo.Pages
             SharedObservableViewModel = new();
             ButtonExampleViewModel = new();
             SvgWrapperViewModel = new(SvgHandler);
+
+            MessengerSender = new MessengerSenderViewModel(Messenger);
+            MessengerReceiver = new MessengerReceiverViewModel(Messenger);
+
             base.OnInitialized();
+        }
+
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
+            if (firstRender)
+            {
+                await JS.InvokeVoidAsync("scrollSync.init");
+            }
+            await base.OnAfterRenderAsync(firstRender);
         }
     }
 }

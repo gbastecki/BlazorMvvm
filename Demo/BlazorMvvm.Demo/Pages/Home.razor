@@ -1,87 +1,779 @@
 ﻿@inherits BlazorMvvmComponentBase<HomeViewModel>
 @page "/"
-
-<div class="this-body">
-    <div class="this-container">
-        <div class="this-group-fieldset">
-            <div class="this-group-legend">HomeViewModel</div>
-            <div>Current counter: @BaseViewModel.Counter</div>
-
-            <button @onclick="() => BaseViewModel.IncreaseCounterCommand.Execute(true)">Increase counter with refreshing</button>
-            <button @onclick="() => BaseViewModel.IncreaseCounterCommand.Execute(false)">Increase counter without refreshing</button>
-
-            <hr />
-
-            <div class="this-container">
-                <div class="this-group-fieldset">
-                    <div class="this-group-legend">ObservablePartViewModel</div>
-                    <ObservableComponent ViewModel="ObservablePartViewModel">
-                        <div>ObservableComponent current counter: @ObservablePartViewModel.Counter</div>
-                    </ObservableComponent>
-                    <button @onclick="() => ObservablePartViewModel.IncreaseCounterCommand.Execute(true)">Increase ObservableComponent counter with refreshing</button>
-                    <button @onclick="() => ObservablePartViewModel.IncreaseCounterCommand.Execute(false)">Increase ObservableComponent counter without refreshing</button>
+<div class="demo-layout">
+    <nav class="toc-nav">
+        <h4>Contents</h4>
+        <ul>
+            <li><a href="#getting-started">Getting Started</a></li>
+            <li><a href="#observable-properties">Observable Properties</a></li>
+            <li><a href="#commands">Commands</a></li>
+            <li><a href="#observable-component">ObservableComponent</a></li>
+            <li><a href="#messenger">BlazorMessenger</a></li>
+            <li><a href="#viewmodel-factory">ViewModelFactory</a></li>
+            <li><a href="#performance">Performance Demo</a></li>
+            <li><a href="#source-repository">Source Repository</a></li>
+        </ul>
+    </nav>
+    <div class="demo-content">
+        <header class="demo-header">
+            <h1>BlazorMvvm Live Demo</h1>
+            <p>Interactive examples demonstrating MVVM patterns in Blazor</p>
+            <div class="feature-list">
+                <span class="feature-badge">Source Generation</span>
+                <span class="feature-badge">AOT Compatible</span>
+                <span class="feature-badge">Trimming Safe</span>
+                <span class="feature-badge">Zero Reflection</span>
+            </div>
+        </header>
+        @* ===== GETTING STARTED ===== *@
+        <section id="getting-started" class="demo-section">
+            <h2>Getting Started</h2>
+            <div class="demo-card">
+                <h3>Component Setup</h3>
+                <p>Inherit from <code>BlazorMvvmComponentBase&lt;TViewModel&gt;</code> to connect your View and ViewModel.</p>
+                <div class="code-tabs">
+                    <details open>
+                        <summary>With DI (ViewModelFactory)</summary>
+                        <pre><code>// ViewModel - register with attribute
+[BlazorMvvmViewModel(ViewModelLifetime.Scoped)]
+public partial class HomeViewModel : BlazorViewModel
+{
+    [BlazorObservableProperty]
+    private int _counter;
+}
+// Component - ViewModel auto-injected
+public partial class Home : BlazorMvvmComponentBase&lt;HomeViewModel&gt;
+{
+    protected override void OnInitialized()
+    {
+        // BaseViewModel is automatically resolved
+        // SetDataContext is called automatically
+        base.OnInitialized();
+    }
+}
+// Program.cs - register factory
+builder.Services.UseBlazorMvvmViewModelFactory();</code></pre>
+                    </details>
+                    <details>
+                        <summary>Manual Setup</summary>
+                        <pre><code>// ViewModel - no attributes needed
+public class HomeViewModel : BlazorViewModel
+{
+    private int _counter;
+    public int Counter
+    {
+        get =&gt; _counter;
+        set =&gt; Set(ref _counter, value);
+    }
+}
+// Component - manual instantiation
+public partial class Home : BlazorMvvmComponentBase&lt;HomeViewModel&gt;
+{
+    HomeViewModel ViewModel = new();
+    protected override void OnInitialized()
+    {
+        // Must call SetDataContext manually
+        SetDataContext(ViewModel);
+        base.OnInitialized();
+    }
+}</code></pre>
+                    </details>
                 </div>
             </div>
-
-            <hr />
-
-            <div class="this-container">
-                <div class="this-group-fieldset">
-                    <div class="this-group-legend">SharedObservableViewModel with observable property Counter1</div>
-                    <ObservableComponent ViewModel="SharedObservableViewModel" PropertyNames="[nameof(SharedObservableViewModel.Counter1)]">
-                        <div>SharedObservableViewModel current counter 1: @SharedObservableViewModel.Counter1</div>
-                    </ObservableComponent>
-                    <button @onclick="() => SharedObservableViewModel.IncreaseCounterCommand1.Execute(true)">Increase SharedObservableViewModel counter 1 with refreshing</button>
-                    <button @onclick="() => SharedObservableViewModel.IncreaseCounterCommand1.Execute(false)">Increase SharedObservableViewModel counter 1 without refreshing</button>
+            <div class="demo-card">
+                <h3>Razor File</h3>
+                <p>The razor markup is the same for both approaches.</p>
+                <details>
+                    <summary>View Code</summary>
+                    <pre><code>@@inherits BlazorMvvmComponentBase&lt;HomeViewModel&gt;
+@@page "/"
+&lt;div&gt;Counter: @@BaseViewModel.Counter&lt;/div&gt;
+&lt;button @@onclick="BaseViewModel.IncrementCommand.Execute"&gt;
+    Increment
+&lt;/button&gt;</code></pre>
+                </details>
+            </div>
+        </section>
+        @* ===== OBSERVABLE PROPERTIES ===== *@
+        <section id="observable-properties" class="demo-section">
+            <h2>Observable Properties</h2>
+            <div class="demo-card">
+                <h3>Source-Generated Properties</h3>
+                <p>Use <code>[BlazorObservableProperty]</code> to auto-generate properties with change notification.</p>
+                <ObservableComponent ViewModel="ObservablePartViewModel">
+                    <div class="demo-result">
+                        Counter: <strong>@ObservablePartViewModel.Counter</strong>
+                    </div>
+                </ObservableComponent>
+                <div class="demo-buttons">
+                    <button @onclick="() => ObservablePartViewModel.IncreaseCounterCommand.Execute(true)">Increment (with notify)</button>
+                    <button @onclick="() => ObservablePartViewModel.IncreaseCounterCommand.Execute(false)">Increment (silent)</button>
+                </div>
+                <div class="code-tabs">
+                    <details>
+                        <summary>Source Generation</summary>
+                        <pre><code>public partial class CounterViewModel : BlazorViewModel
+{
+    [BlazorObservableProperty]
+    private int _counter;
+    
+    // Generates property with change notification
+}</code></pre>
+                    </details>
+                    <details>
+                        <summary>Manual Implementation</summary>
+                        <pre><code>public class CounterViewModel : BlazorViewModel
+{
+    private int _counter;
+    public int Counter
+    {
+        get => _counter;
+        set => Set(ref _counter, value);
+    }
+}</code></pre>
+                    </details>
                 </div>
             </div>
-
-            <hr />
-
-            <div class="this-container">
-                <div class="this-group-fieldset">
-                    <div class="this-group-legend">SharedObservableViewModel with observable properties Counter2 and Counter3</div>
-                    <ObservableComponent ViewModel="SharedObservableViewModel" PropertyNames="[nameof(SharedObservableViewModel.Counter2), nameof(SharedObservableViewModel.Counter3)]">
-                        <div>SharedObservableViewModel current counter 2: @SharedObservableViewModel.Counter2</div>
-                        <div>SharedObservableViewModel current counter 3: @SharedObservableViewModel.Counter3</div>
-                    </ObservableComponent>
-
-                    <button @onclick="() => SharedObservableViewModel.IncreaseCounterCommand2.Execute(true)">Increase SharedObservableViewModel counter 2 with refreshing</button>
-                    <button @onclick="() => SharedObservableViewModel.IncreaseCounterCommand2.Execute(false)">Increase SharedObservableViewModel counter 2 without refreshing</button>
-
-                    <button @onclick="() => SharedObservableViewModel.IncreaseCounterCommand3.Execute(true)">Increase SharedObservableViewModel counter 3 with refreshing</button>
-                    <button @onclick="() => SharedObservableViewModel.IncreaseCounterCommand3.Execute(false)">Increase SharedObservableViewModel counter 3 without refreshing</button>
+        </section>
+        @* ===== COMMANDS ===== *@
+        <section id="commands" class="demo-section">
+            <h2>Commands</h2>
+            <div class="demo-card">
+                <h3>Synchronous Command</h3>
+                <p>Use <code>[BlazorCommand]</code> to generate commands from methods.</p>
+                <div class="demo-result">
+                    Counter: <strong>@BaseViewModel.Counter</strong>
+                </div>
+                <div class="demo-buttons">
+                    <button @onclick="() => BaseViewModel.IncreaseCounterCommand.Execute(true)">Increment</button>
+                </div>
+                <div class="code-tabs">
+                    <details>
+                        <summary>Source Generation</summary>
+                        <pre><code>public partial class MyViewModel : BlazorViewModel
+{
+    [BlazorObservableProperty]
+    private int _counter;
+    // Generates: public IBlazorCommand IncrementCommand { get; }
+    [BlazorCommand]
+    private void Increment() => Counter++;
+}</code></pre>
+                    </details>
+                    <details>
+                        <summary>Manual Implementation</summary>
+                        <pre><code>public class MyViewModel : BlazorViewModel
+{
+    private int _counter;
+    public int Counter
+    {
+        get => _counter;
+        set => Set(ref _counter, value);
+    }
+    private IBlazorCommand? _incrementCommand;
+    public IBlazorCommand IncrementCommand => 
+        _incrementCommand ??= new BlazorCommand(Increment);
+    
+    private void Increment() => Counter++;
+}</code></pre>
+                    </details>
                 </div>
             </div>
-
-            <hr />
-
-            <div class="this-container">
-                <div class="this-group-fieldset">
-                    <div class="this-group-legend">ButtonExampleViewModel</div>
-                    <ObservableComponent ViewModel="ButtonExampleViewModel">
-                        <button @onclick="ButtonExampleViewModel.DisableButtonCommand.Execute" disabled="@ButtonExampleViewModel.DisableButtonCommand.IsExecuting">Disable button for a few seconds</button>
-                    </ObservableComponent>
+            <div class="demo-card">
+                <h3>Async Command with Loading State</h3>
+                <p>Use <code>AutoRefreshOnIsExecutingChanged</code> to automatically trigger UI refresh when <code>IsExecuting</code> changes.</p>
+                <ObservableComponent ViewModel="ButtonExampleViewModel">
+                    <div class="demo-buttons">
+                        <button @onclick="ButtonExampleViewModel.DisableButtonCommand.Execute"
+                                disabled="@ButtonExampleViewModel.DisableButtonCommand.IsExecuting">
+                            @if (ButtonExampleViewModel.DisableButtonCommand.IsExecuting)
+                            {
+                                <span>Loading... (5s)</span>
+                            }
+                            else
+                            {
+                                <span>Click to disable for 5 seconds</span>
+                            }
+                        </button>
+                    </div>
+                </ObservableComponent>
+                <div class="code-tabs">
+                    <details>
+                        <summary>Source Generation</summary>
+                        <pre><code>public partial class MyViewModel : BlazorViewModel
+{
+    // Generates command with automatic OnPropertyChanged() callback
+    // when IsExecuting changes
+    [BlazorCommand(autoRefreshOnIsExecutingChanged: true)]
+    private async Task LoadDataAsync()
+    {
+        await Task.Delay(5000);
+    }
+}</code></pre>
+                    </details>
+                    <details>
+                        <summary>Manual Implementation</summary>
+                        <pre><code>public class MyViewModel : BlazorViewModel, IDisposable
+{
+    public IBlazorAsyncCommand LoadDataAsyncCommand { get; }
+    
+    public MyViewModel()
+    {
+        LoadDataAsyncCommand = new BlazorAsyncCommand(LoadDataAsync);
+        LoadDataAsyncCommand.OnIsExecutingChanged += OnExecutingChanged;
+    }
+    
+    private async Task LoadDataAsync() => await Task.Delay(5000);
+    
+    private void OnExecutingChanged(bool _) => OnPropertyChanged();
+    
+    public void Dispose() =>
+        LoadDataAsyncCommand.OnIsExecutingChanged -= OnExecutingChanged;
+}</code></pre>
+                    </details>
                 </div>
             </div>
-
-            <hr />
-
-            <div class="this-container">
-                <div class="this-group-fieldset">
-                    <div class="this-group-legend">Rectangles dragging</div>
-                    <p>Create rectangles and drag them. Motion should be smooth due to only one component being re-rendered.</p>
-                    <button @onclick="SvgWrapperViewModel.CreateRectanglesCommand.Execute" disabled="@SvgWrapperViewModel.CreateRectanglesCommand.IsExecuting">Create 10000 rectangles</button>
-                    <ObservableComponent ViewModel="SvgWrapperViewModel">
-                        <svg @ref="SvgWrapperViewModel.SvgRef" class="thiscomponent-viewbox-svg" viewBox="0 0 @SvgWrapperViewModel.SvgMaxX @SvgWrapperViewModel.SvgMaxY">
+            <div class="demo-card">
+                <h3>Command with OnIsExecutingChangedCallback</h3>
+                <p>Wire up a callback method that is invoked when <code>IsExecuting</code> changes.</p>
+                <ObservableComponent ViewModel="MessengerSender">
+                    <div class="demo-result">
+                        Is Sending: <strong>@MessengerSender.IsSending</strong>
+                    </div>
+                    <div class="demo-buttons">
+                        <button @onclick="MessengerSender.SendMessageCommand.Execute"
+                                disabled="@MessengerSender.IsSending">
+                            @if (MessengerSender.IsSending)
+                            {
+                                <span>Sending...</span>
+                            }
+                            else
+                            {
+                                <span>Send Message</span>
+                            }
+                        </button>
+                    </div>
+                </ObservableComponent>
+                <div class="code-tabs">
+                    <details>
+                        <summary>Source Generation</summary>
+                        <pre><code>public partial class MyViewModel : BlazorViewModel
+{
+    [BlazorObservableProperty]
+    private bool _isSending;
+    // Callback is wired up automatically
+    [BlazorCommand(OnIsExecutingChangedCallback = nameof(OnSendingChanged))]
+    private async Task SendMessage()
+    {
+        await Task.Delay(200);
+    }
+    private void OnSendingChanged(bool isExecuting)
+    {
+        IsSending = isExecuting;
+    }
+}</code></pre>
+                    </details>
+                    <details>
+                        <summary>Manual Implementation</summary>
+                        <pre><code>public class MyViewModel : BlazorViewModel, IDisposable
+{
+    private bool _isSending;
+    public bool IsSending
+    {
+        get => _isSending;
+        set => Set(ref _isSending, value);
+    }
+    
+    public IBlazorAsyncCommand SendMessageCommand { get; }
+    
+    public MyViewModel()
+    {
+        SendMessageCommand = new BlazorAsyncCommand(SendMessage);
+        SendMessageCommand.OnIsExecutingChanged += OnSendingChanged;
+    }
+    
+    private async Task SendMessage() => await Task.Delay(200);
+    private void OnSendingChanged(bool isExecuting) => IsSending = isExecuting;
+    
+    public void Dispose() =>
+        SendMessageCommand.OnIsExecutingChanged -= OnSendingChanged;
+}</code></pre>
+                    </details>
+                </div>
+            </div>
+        </section>
+        @* ===== OBSERVABLE COMPONENT ===== *@
+        <section id="observable-component" class="demo-section">
+            <h2>ObservableComponent</h2>
+            <div class="demo-card">
+                <h3>Selective Property Updates</h3>
+                <p>Use <code>PropertyNames</code> to re-render only when specific properties change.</p>
+                <div class="messenger-grid">
+                    <div>
+                        <strong>Watches Counter1 only:</strong>
+                        <ObservableComponent ViewModel="SharedObservableViewModel" PropertyNames="[nameof(SharedObservableViewModel.Counter1)]">
+                            <div class="demo-result">Counter1: <strong>@SharedObservableViewModel.Counter1</strong></div>
+                        </ObservableComponent>
+                    </div>
+                    <div>
+                        <strong>Watches Counter2 &amp; Counter3:</strong>
+                        <ObservableComponent ViewModel="SharedObservableViewModel" PropertyNames="[nameof(SharedObservableViewModel.Counter2), nameof(SharedObservableViewModel.Counter3)]">
+                            <div class="demo-result">
+                                Counter2: <strong>@SharedObservableViewModel.Counter2</strong><br />
+                                Counter3: <strong>@SharedObservableViewModel.Counter3</strong>
+                            </div>
+                        </ObservableComponent>
+                    </div>
+                </div>
+                <div class="demo-buttons">
+                    <button @onclick="() => SharedObservableViewModel.IncreaseCounterCommand1.Execute(true)">Increment Counter1</button>
+                    <button @onclick="() => SharedObservableViewModel.IncreaseCounterCommand2.Execute(true)">Increment Counter2</button>
+                    <button @onclick="() => SharedObservableViewModel.IncreaseCounterCommand3.Execute(true)">Increment Counter3</button>
+                </div>
+                <details>
+                    <summary>View Code</summary>
+                    <pre><code>&lt;ObservableComponent ViewModel="SharedVM" 
+    PropertyNames="[nameof(SharedVM.Counter1)]"&gt;
+    &lt;div&gt;Counter1: @@SharedVM.Counter1&lt;/div&gt;
+&lt;/ObservableComponent&gt;
+&lt;ObservableComponent ViewModel="SharedVM" 
+    PropertyNames="[nameof(SharedVM.Counter2), nameof(SharedVM.Counter3)]"&gt;
+    &lt;div&gt;Counter2: @@SharedVM.Counter2&lt;/div&gt;
+    &lt;div&gt;Counter3: @@SharedVM.Counter3&lt;/div&gt;
+&lt;/ObservableComponent&gt;</code></pre>
+                </details>
+            </div>
+        </section>
+        @* ===== MESSENGER ===== *@
+        <section id="messenger" class="demo-section">
+            <h2>BlazorMessenger</h2>
+            <div class="demo-card">
+                <h3>Cross-ViewModel Communication</h3>
+                <p>Send messages between ViewModels using <code>IBlazorMessenger</code>.</p>
+                <div class="messenger-grid">
+                    <div>
+                        <strong>Sender:</strong>
+                        <ObservableComponent ViewModel="MessengerSender">
+                            <div class="demo-result">Counter: <strong>@MessengerSender.Counter</strong></div>
+                            <button @onclick="MessengerSender.SendMessageCommand.Execute"
+                                    disabled="@MessengerSender.IsSending">
+                                Send Message
+                            </button>
+                        </ObservableComponent>
+                    </div>
+                    <div>
+                        <strong>Receiver (auto-registered):</strong>
+                        <ObservableComponent ViewModel="MessengerReceiver">
+                            <div class="demo-result">
+                                Received: <strong>@MessengerReceiver.ReceivedCounter</strong><br />
+                                Total: @MessengerReceiver.MessageCount messages<br />
+                                @MessengerReceiver.LastMessage
+                            </div>
+                        </ObservableComponent>
+                    </div>
+                </div>
+                <details>
+                    <summary>View Message Code</summary>
+                    <pre><code>public class CounterUpdateMessage : ValueChangedMessage&lt;int&gt;
+{
+    public CounterUpdateMessage(int value) : base(value) { }
+}</code></pre>
+                </details>
+                <div class="code-tabs">
+                    <details>
+                        <summary>Sender (Source Generation)</summary>
+                        <pre><code>// Sender only needs to inject the messenger - no registration needed
+public partial class SenderViewModel : BlazorViewModel
+{
+    private readonly IBlazorMessenger _messenger;
+    [BlazorObservableProperty]
+    private int _counter;
+    // Constructor injection for IBlazorMessenger
+    public SenderViewModel(IBlazorMessenger messenger)
+    {
+        _messenger = messenger;
+    }
+    [BlazorCommand]
+    private void SendMessage()
+    {
+        Counter++;
+        // Send message to all registered recipients
+        _messenger.Send(new CounterUpdateMessage(Counter));
+    }
+}</code></pre>
+                    </details>
+                    <details>
+                        <summary>Sender (Manual)</summary>
+                        <pre><code>// Sender only needs to inject the messenger - no registration needed
+public class SenderViewModel : BlazorViewModel
+{
+    private readonly IBlazorMessenger _messenger;
+    
+    private int _counter;
+    public int Counter
+    {
+        get =&gt; _counter;
+        set =&gt; Set(ref _counter, value);
+    }
+    
+    private IBlazorCommand? _sendMessageCommand;
+    public IBlazorCommand SendMessageCommand =&gt;
+        _sendMessageCommand ??= new BlazorCommand(SendMessage);
+    
+    // Constructor injection for IBlazorMessenger
+    public SenderViewModel(IBlazorMessenger messenger)
+    {
+        _messenger = messenger;
+    }
+    
+    private void SendMessage()
+    {
+        Counter++;
+        // Send message to all registered recipients
+        _messenger.Send(new CounterUpdateMessage(Counter));
+    }
+}</code></pre>
+                    </details>
+                </div>
+                <div class="code-tabs">
+                    <details>
+                        <summary>Receiver (Source Generation)</summary>
+                        <pre><code>// [BlazorMessenger] generates RegisterMessenger/UnregisterMessenger methods
+// Receiver MUST implement IBlazorRecipient&lt;TMessage&gt; for each message type
+[BlazorMessenger]
+public partial class ReceiverViewModel : BlazorViewModel, 
+    IBlazorRecipient&lt;CounterUpdateMessage&gt;, IDisposable
+{
+    private readonly IBlazorMessenger _messenger;
+    [BlazorObservableProperty]
+    private int _receivedCounter;
+    // Register in constructor - starts listening for messages
+    public ReceiverViewModel(IBlazorMessenger messenger)
+    {
+        _messenger = messenger;
+        RegisterMessenger(_messenger); // Generated method
+    }
+    // Unregister in Dispose - stops listening, prevents memory leaks
+    public void Dispose()
+    {
+        UnregisterMessenger(_messenger); // Generated method
+    }
+    // Called when CounterUpdateMessage is received
+    public void Receive(CounterUpdateMessage message)
+    {
+        ReceivedCounter = message.Value;
+    }
+}</code></pre>
+                    </details>
+                    <details>
+                        <summary>Receiver (Manual)</summary>
+                        <pre><code>// Receiver MUST implement IBlazorRecipient&lt;TMessage&gt; for each message type
+public class ReceiverViewModel : BlazorViewModel, 
+    IBlazorRecipient&lt;CounterUpdateMessage&gt;, IDisposable
+{
+    private readonly IBlazorMessenger _messenger;
+    
+    private int _receivedCounter;
+    public int ReceivedCounter
+    {
+        get =&gt; _receivedCounter;
+        set =&gt; Set(ref _receivedCounter, value);
+    }
+    // Register in constructor - starts listening for messages
+    public ReceiverViewModel(IBlazorMessenger messenger)
+    {
+        _messenger = messenger;
+        // Register for each message type manually
+        _messenger.Register&lt;CounterUpdateMessage&gt;(this);
+    }
+    // Unregister in Dispose - stops listening, prevents memory leaks
+    public void Dispose()
+    {
+        // Unregister from each message type
+        _messenger.Unregister&lt;CounterUpdateMessage&gt;(this);
+    }
+    // Called when CounterUpdateMessage is received
+    public void Receive(CounterUpdateMessage message)
+    {
+        ReceivedCounter = message.Value;
+    }
+}</code></pre>
+                    </details>
+                </div>
+            </div>
+            <div class="demo-card">
+                <h3>Messenger Setup</h3>
+                <p>Choose between Dependency Injection or static singleton access.</p>
+                <div class="code-tabs">
+                    <details>
+                        <summary>Dependency Injection (Recommended)</summary>
+                        <pre><code>// Program.cs - Register messenger as singleton
+builder.Services.AddSingleton&lt;IBlazorMessenger, BlazorMessenger&gt;();
+// ViewModel - Inject via constructor
+public class MyViewModel : BlazorViewModel
+{
+    private readonly IBlazorMessenger _messenger;
+    
+    public MyViewModel(IBlazorMessenger messenger)
+    {
+        _messenger = messenger;
+    }
+    
+    public void SendNotification() =&gt;
+        _messenger.Send(new NotificationMessage("Hello!"));
+}</code></pre>
+                    </details>
+                    <details>
+                        <summary>Static Singleton</summary>
+                        <pre><code>// No registration needed - use static Default property
+public class MyViewModel : BlazorViewModel
+{
+    public void SendNotification()
+    {
+        // Access singleton directly - useful for static contexts
+        BlazorMessenger.Default.Send(new NotificationMessage("Hello!"));
+    }
+}
+// Receiver using static singleton
+public class ReceiverViewModel : BlazorViewModel, 
+    IBlazorRecipient&lt;NotificationMessage&gt;, IDisposable
+{
+    public ReceiverViewModel()
+    {
+        BlazorMessenger.Default.Register&lt;NotificationMessage&gt;(this);
+    }
+    
+    public void Dispose() =&gt;
+        BlazorMessenger.Default.Unregister&lt;NotificationMessage&gt;(this);
+    
+    public void Receive(NotificationMessage message) { }
+}</code></pre>
+                    </details>
+                </div>
+            </div>
+            <div class="demo-card">
+                <h3>Strong Reference Messenger</h3>
+                <p>Use <code>BlazorStrongMessenger</code> when you need guaranteed message delivery and explicit lifecycle control.</p>
+                <div class="code-tabs">
+                    <details>
+                        <summary>Registration &amp; Usage</summary>
+                        <pre><code>// Program.cs - Use strong messenger instead of weak
+builder.Services.AddSingleton&lt;IBlazorMessenger, BlazorStrongMessenger&gt;();
+// Or use static singleton
+BlazorStrongMessenger.Default.Send(new MyMessage());</code></pre>
+                    </details>
+                    <details>
+                        <summary>Weak vs Strong References</summary>
+                        <pre><code>// BlazorMessenger (default) - WEAK references
+// - Recipients can be garbage collected even if still registered
+// - Safer for long-lived messengers with short-lived recipients
+// - Forgetting to unregister won't cause memory leaks
+// BlazorStrongMessenger - STRONG references  
+// - Recipients kept alive until explicitly unregistered
+// - Guaranteed message delivery while registered
+// - MUST call Unregister/Dispose to prevent memory leaks
+// WARNING: With BlazorStrongMessenger, always implement IDisposable
+public class ReceiverViewModel : BlazorViewModel, 
+    IBlazorRecipient&lt;MyMessage&gt;, IDisposable
+{
+    public ReceiverViewModel(IBlazorMessenger messenger)
+    {
+        messenger.Register&lt;MyMessage&gt;(this);
+    }
+    
+    // CRITICAL: Must unregister to avoid memory leaks!
+    public void Dispose() =&gt;
+        messenger.Unregister&lt;MyMessage&gt;(this);
+    
+    public void Receive(MyMessage message) { }
+}</code></pre>
+                    </details>
+                </div>
+            </div>
+            <div class="demo-card">
+                <h3>Channel-based Messaging</h3>
+                <p>Use tokens to create isolated communication channels. Only recipients registered on a channel receive messages sent to that channel.</p>
+                <div class="code-tabs">
+                    <details>
+                        <summary>String Channels</summary>
+                        <pre><code>// Define channel tokens (any IEquatable&lt;T&gt; type works)
+public static class Channels
+{
+    public const string Primary = "Primary";
+    public const string Secondary = "Secondary";
+}
+// Register receiver on a specific channel
+public ReceiverViewModel(IBlazorMessenger messenger)
+{
+    // Only receives messages sent to "Primary" channel
+    messenger.Register&lt;MyMessage, string&gt;(this, Channels.Primary,
+        (recipient, message) =&gt; ((ReceiverViewModel)recipient).OnMessage(message));
+}
+// Send message to specific channel
+_messenger.Send(new MyMessage(), Channels.Primary);   // Received
+_messenger.Send(new MyMessage(), Channels.Secondary); // NOT received</code></pre>
+                    </details>
+                    <details>
+                        <summary>Enum Channels (via int)</summary>
+                        <pre><code>// Define enum for readable channel identifiers
+// Note: Enums don't implement IEquatable&lt;T&gt; by default,
+// so cast to int when using as tokens
+public enum NotificationChannel
+{
+    System = 0,
+    User = 1,
+    Debug = 2
+}
+public class LogViewModel : BlazorViewModel, 
+    IBlazorRecipient&lt;LogMessage&gt;, IDisposable
+{
+    private readonly IBlazorMessenger _messenger;
+    
+    public LogViewModel(IBlazorMessenger messenger)
+    {
+        _messenger = messenger;
+        // Register for Debug channel only (cast enum to int)
+        _messenger.Register&lt;LogMessage, int&gt;(
+            this, 
+            (int)NotificationChannel.Debug,
+            (r, m) =&gt; ((LogViewModel)r).Receive(m));
+    }
+    
+    public void Dispose() =&gt;
+        _messenger.Unregister&lt;LogMessage, int&gt;(
+            this, (int)NotificationChannel.Debug);
+    
+    public void Receive(LogMessage message)
+    {
+        Console.WriteLine($"[DEBUG] {message.Text}");
+    }
+}
+// Send to specific channel (cast enum to int)
+_messenger.Send(new LogMessage("System starting"), (int)NotificationChannel.System);
+_messenger.Send(new LogMessage("User clicked"), (int)NotificationChannel.User);
+_messenger.Send(new LogMessage("Variable x = 5"), (int)NotificationChannel.Debug);</code></pre>
+                    </details>
+                    <details>
+                        <summary>With Source Generation</summary>
+                        <pre><code>// Note: [BlazorMessenger] attribute currently generates registration
+// for the default channel only. For channel-specific registration,
+// combine generated methods with manual channel registration:
+[BlazorMessenger]
+public partial class MultiChannelReceiver : BlazorViewModel,
+    IBlazorRecipient&lt;AlertMessage&gt;, IDisposable
+{
+    private readonly IBlazorMessenger _messenger;
+    
+    public MultiChannelReceiver(IBlazorMessenger messenger)
+    {
+        _messenger = messenger;
+        
+        // Register on default channel (via generated method)
+        RegisterMessenger(_messenger);
+        
+        // Additionally register on specific channels (manual)
+        _messenger.Register&lt;AlertMessage, string&gt;(
+            this, "HighPriority",
+            (r, m) =&gt; ((MultiChannelReceiver)r).Receive(m));
+    }
+    
+    public void Dispose()
+    {
+        UnregisterMessenger(_messenger);
+        _messenger.Unregister&lt;AlertMessage, string&gt;(this, "HighPriority");
+    }
+    
+    public void Receive(AlertMessage message) { }
+}</code></pre>
+                    </details>
+                </div>
+            </div>
+        </section>
+        @* ===== VIEWMODEL FACTORY ===== *@
+        <section id="viewmodel-factory" class="demo-section">
+            <h2>ViewModelFactory</h2>
+            <div class="demo-card">
+                <h3>Dependency Injection</h3>
+                <p>Register ViewModels with <code>[BlazorMvvmViewModel]</code> for automatic DI.</p>
+                <details>
+                    <summary>View Registration Code</summary>
+                    <pre><code>// Program.cs
+builder.Services.UseBlazorMvvmViewModelFactory();
+// ViewModel with lifetime
+[BlazorMvvmViewModel(ViewModelLifetime.Singleton)]
+public class HomeViewModel : BlazorViewModel
+{
+    private readonly IService _service;
+    
+    public HomeViewModel(IService service) 
+    {
+        _service = service;
+    }
+    // Constructor selection
+    [BlazorMvvmViewModelFactoryConstructor]
+    public HomeViewModel(IService service, ILogger logger) { }
+}
+</code></pre>
+                </details>
+                <details>
+                    <summary>View Component Code</summary>
+                    <pre><code>// ViewModel auto-injected via BaseViewModel property
+public partial class Home : BlazorMvvmComponentBase&lt;HomeViewModel&gt;
+{
+    protected override void OnInitialized()
+    {
+        // No manual SetDataContext needed!
+        // BaseViewModel is automatically resolved and set.
+        base.OnInitialized();
+    }
+}</code></pre>
+                </details>
+            </div>
+            <div class="demo-card">
+                <h3>Lifetime Options</h3>
+                <ul>
+                    <li><code>Transient</code> - Created every time (default)</li>
+                    <li><code>Scoped</code> - Created once per scope</li>
+                    <li><code>Singleton</code> - Created once per application</li>
+                </ul>
+            </div>
+        </section>
+        @* ===== SVG PERFORMANCE DEMO ===== *@
+        <section id="performance" class="demo-section">
+            <h2>Performance Demo</h2>
+            <div class="demo-card">
+                <h3>Draggable Rectangles</h3>
+                <p>Create rectangles and drag them. Motion is smooth due to selective re-rendering.</p>
+                <div class="demo-buttons">
+                    <button @onclick="SvgWrapperViewModel.CreateRectanglesCommand.Execute"
+                            disabled="@SvgWrapperViewModel.CreateRectanglesCommand.IsExecuting">
+                        Create 10,000 Rectangles
+                    </button>
+                </div>
+                <ObservableComponent ViewModel="SvgWrapperViewModel">
+                    <div class="svg-container">
+                        <svg @ref="SvgWrapperViewModel.SvgRef"
+                             viewBox="0 0 @SvgWrapperViewModel.SvgMaxX @SvgWrapperViewModel.SvgMaxY"
+                             @onmousemove="SvgWrapperViewModel.OnSvgMouseMoveCommand.Execute"
+                             @onmouseup="SvgWrapperViewModel.OnSvgMouseUpCommand.Execute"
+                             @onmouseleave="SvgWrapperViewModel.OnSvgMouseLeaveCommand.Execute">
                             @foreach (var rect in SvgWrapperViewModel.Rectangles)
                             {
                                 <BlazorMvvm.Demo.Pages.Components.RectangleComponent ViewModel="rect" />
                             }
                         </svg>
-                    </ObservableComponent>
-                </div>
+                    </div>
+                </ObservableComponent>
             </div>
-        </div>
+        </section>
+        @* ===== SOURCE REPOSITORY ===== *@
+        <section id="source-repository" class="demo-section">
+            <h2>Source repository</h2>
+            <div class="demo-card">
+                <span>The source code for BlazorMvvm is available on</span>
+                <span>
+                    <a href="https://github.com/gbastecki/BlazorMvvm">GitHub</a>
+                </span>
+            </div>
+        </section>
     </div>
 </div>

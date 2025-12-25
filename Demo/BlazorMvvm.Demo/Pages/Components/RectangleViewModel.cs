@@ -12,18 +12,11 @@ namespace BlazorMvvm.Demo.Pages.Components
         private readonly SvgWrapperViewModel ParentViewModel;
 
         public readonly IBlazorAsyncRelayCommand<MouseEventArgs> OnMouseDownCommand;
-        public readonly IBlazorAsyncRelayCommand<MouseEventArgs> OnMouseMoveCommand;
-        public readonly IBlazorAsyncRelayCommand<MouseEventArgs> OnMouseUpCommand;
-        public readonly IBlazorAsyncRelayCommand<MouseEventArgs> OnMouseEnterCommand;
-        public readonly IBlazorAsyncRelayCommand<MouseEventArgs> OnMouseOutCommand;
+
         public RectangleViewModel(SvgWrapperViewModel ParentViewModel)
         {
             this.ParentViewModel = ParentViewModel;
             OnMouseDownCommand = new BlazorAsyncRelayCommand<MouseEventArgs>(OnMouseDown);
-            OnMouseMoveCommand = new BlazorAsyncRelayCommand<MouseEventArgs>(OnMouseMove);
-            OnMouseUpCommand = new BlazorAsyncRelayCommand<MouseEventArgs>(OnMouseUp);
-            OnMouseEnterCommand = new BlazorAsyncRelayCommand<MouseEventArgs>(OnMouseEnter);
-            OnMouseOutCommand = new BlazorAsyncRelayCommand<MouseEventArgs>(OnMouseOut);
         }
 
         private int _X;
@@ -50,11 +43,12 @@ namespace BlazorMvvm.Demo.Pages.Components
             }
         }
 
-        private bool IsMouseDown;
+        private bool IsDragging;
         private int InitialX;
         private int InitialY;
         private double MouseDownX;
         private double MouseDownY;
+
         private async Task OnMouseDown(MouseEventArgs e)
         {
             if (e.Button != 0) return;
@@ -63,39 +57,31 @@ namespace BlazorMvvm.Demo.Pages.Components
             MouseDownY = y;
             InitialX = X;
             InitialY = Y;
-            IsMouseDown = true;
+            IsDragging = true;
+            ParentViewModel.ActiveDragRect = this;
         }
-        private async Task OnMouseMove(MouseEventArgs e)
+
+        public async Task HandleMouseMove(MouseEventArgs e)
         {
-            if (!IsMouseDown) return;
-            (int x, int y) = await GetClickCoordinates(e);
-            X = InitialX + (int)(x - MouseDownX);
-            Y = InitialY + (int)(y - MouseDownY);
-        }
-        private async Task OnMouseUp(MouseEventArgs e)
-        {
-            if (!IsMouseDown) return;
-            (int x, int y) = await GetClickCoordinates(e);
-            X = InitialX + (int)(x - MouseDownX);
-            Y = InitialY + (int)(y - MouseDownY);
-            IsMouseDown = false;
-        }
-        private Task OnMouseEnter(MouseEventArgs e)
-        {
-            if (e.Buttons != 1)
-            {
-                IsMouseDown = false;
-            }
-            return Task.CompletedTask;
-        }
-        private async Task OnMouseOut(MouseEventArgs e)
-        {
-            if (!IsMouseDown) return;
+            if (!IsDragging) return;
             (int x, int y) = await GetClickCoordinates(e);
             X = InitialX + (int)(x - MouseDownX);
             Y = InitialY + (int)(y - MouseDownY);
         }
 
+        public async Task HandleMouseUp(MouseEventArgs e)
+        {
+            if (!IsDragging) return;
+            (int x, int y) = await GetClickCoordinates(e);
+            X = InitialX + (int)(x - MouseDownX);
+            Y = InitialY + (int)(y - MouseDownY);
+            IsDragging = false;
+        }
+
+        public void CancelDrag()
+        {
+            IsDragging = false;
+        }
 
         private async Task<(int x, int y)> GetClickCoordinates(MouseEventArgs e)
         {
