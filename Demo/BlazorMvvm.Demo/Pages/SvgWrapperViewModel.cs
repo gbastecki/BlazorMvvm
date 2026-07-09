@@ -25,21 +25,21 @@ namespace BlazorMvvm.Demo.Pages
         public SvgWrapperViewModel(SvgHandler SvgHandler)
         {
             this.SvgHandler = SvgHandler;
-            CreateRectanglesCommand = new BlazorAsyncCommand(CreateRectangles);
+            CreateRectanglesCommand = new BlazorAsyncCommand(CreateRectangles) { ContinueOnCapturedContext = false };
             OnSvgMouseMoveCommand = new BlazorAsyncRelayCommand<MouseEventArgs>(OnSvgMouseMove);
             OnSvgMouseUpCommand = new BlazorAsyncRelayCommand<MouseEventArgs>(OnSvgMouseUp);
             OnSvgMouseLeaveCommand = new BlazorAsyncRelayCommand<MouseEventArgs>(OnSvgMouseLeave);
         }
 
-        private Task CreateRectangles()
+        private async Task CreateRectangles()
         {
+            await Task.Yield();
             Rectangles.Clear();
             for (int i = 0; i < 10000; i++)
             {
                 Rectangles.Add(new RectangleViewModel(this));
             }
             OnPropertyChanged();
-            return Task.CompletedTask;
         }
 
         private async Task OnSvgMouseMove(MouseEventArgs e)

@@ -1,5 +1,27 @@
 ﻿# Changelog
 
+## [1.5.0]
+### Added
+- `ExecuteAsync` method on asynchronous commands (`IBlazorAsyncCommand`, `IBlazorAsyncRelayCommand`, `IBlazorAsyncRelayCommand<T>`), allowing commands to be awaited directly.
+- `ContinueOnCapturedContext` property on asynchronous commands to control context capturing (`ConfigureAwait(continueOnCapturedContext)`), defaulting to `true`.
+- `BlazorCommandAttribute` now supports `ContinueOnCapturedContext` (e.g., `[BlazorCommand(ContinueOnCapturedContext = false)]`), which the source generator automatically configures for the generated commands.
+- Fully awaitable `OnPropertyChangedAsync` method in `BlazorViewModel` that awaits actual UI rendering completion, supported by a non-breaking `OnTriggerRefreshAsync` event.
+- `continueOnCapturedContext` optional parameter on `OnPropertyChangedAsync` (defaulting to `true`) to configure synchronization context capturing dynamically per-call.
+- `DebounceRefresh(delayMs, propertyName)` method on `BlazorViewModel` to debounce property changed notifications (and full view renders) with automatic reset and cancellation behavior, including automatic cancellation of property-specific debounces when a full view refresh is scheduled.
+- `CancelAllDebounces()` helper method on `BlazorViewModel` for manual disposal safety cleanup to cancel all active debounce timers.
+- Hash-based uniqueness in source generator filename output (hintNames), resolving namespace collision bugs (MAX_PATH limitations and class name duplication across namespaces).
+- A CollisionViewModel unit test suite to verify filename generation stability under name collision conditions.
+- Updated existing async unit tests to use `ExecuteAsync` for fully deterministic execution.
+- Added `SynchronizationContext` unit tests verifying `ContinueOnCapturedContext` functionality for both commands and property changes.
+
+### Fixed
+- Thread-safe `IsExecuting` state tracking during concurrent executions (`AllowConcurrentExecutions = true`) in all asynchronous command classes, ensuring the state only reverts to `false` once all active executions are completed.
+
+### Changed
+- Upgraded `Microsoft.CodeAnalysis.Analyzers` in Generator to 5.6.0
+- Downgraded `Microsoft.CodeAnalysis.CSharp` in Generator to 4.3.0 to provide broader compatibility with older .NET SDKs (e.g., .NET 6.0) while maintaining support for .NET 10.0.
+- Updated `README.md` and Demo with new features and usage examples.
+
 ## [1.2.0]
 ### Added
 - `BlazorMessenger` implementation for communicating between recipients (Cross-ViewModel communication).

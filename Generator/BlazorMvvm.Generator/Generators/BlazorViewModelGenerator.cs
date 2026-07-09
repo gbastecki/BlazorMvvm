@@ -73,7 +73,23 @@ namespace BlazorMvvm.Generator.Generators
             string? classSource = GenerateClassSource(classSymbol);
             if (classSource != null)
             {
-                context.AddSource($"{classSymbol.Name}.g.cs", SourceText.From(classSource, Encoding.UTF8));
+                string cleanName = classSymbol.Name.Replace("<", "_").Replace(">", "_").Replace(",", "_").Replace(" ", "");
+                string hash = GetStableHash(classSymbol.ToDisplayString());
+                string hintName = $"{cleanName}_{hash}.g.cs";
+                context.AddSource(hintName, SourceText.From(classSource, Encoding.UTF8));
+            }
+        }
+
+        private static string GetStableHash(string str)
+        {
+            unchecked
+            {
+                uint hash = 2166136261;
+                foreach (char c in str)
+                {
+                    hash = (hash ^ c) * 16777619;
+                }
+                return hash.ToString("X8");
             }
         }
 
@@ -203,6 +219,8 @@ namespace BlazorMvvm.Generator.Generators
                 autoRefreshOnIsExecutingChanged = attribute.ConstructorArguments[3].Value is bool b && b;
             }
 
+            bool continueOnCapturedContext = true;
+
             foreach (KeyValuePair<string, TypedConstant> namedArg in attribute.NamedArguments)
             {
                 if (namedArg.Key == "CanExecute")
@@ -220,6 +238,10 @@ namespace BlazorMvvm.Generator.Generators
                 else if (namedArg.Key == "AutoRefreshOnIsExecutingChanged")
                 {
                     autoRefreshOnIsExecutingChanged = namedArg.Value.Value is bool b && b;
+                }
+                else if (namedArg.Key == "ContinueOnCapturedContext")
+                {
+                    continueOnCapturedContext = namedArg.Value.Value is bool b && b;
                 }
             }
 
@@ -315,7 +337,14 @@ namespace BlazorMvvm.Generator.Generators
                     sb.Append($", allowConcurrentExecutions: {allowConcurrentExecutions}");
                 }
 
-                sb.AppendLine(");");
+                if (isAsync && !continueOnCapturedContext)
+                {
+                    sb.AppendLine(") { ContinueOnCapturedContext = false };");
+                }
+                else
+                {
+                    sb.AppendLine(");");
+                }
 
                 // Generate callback handler based on what is enabled
                 if (autoRefreshOnIsExecutingChanged && !string.IsNullOrEmpty(onIsExecutingChangedCallback))
@@ -366,7 +395,14 @@ namespace BlazorMvvm.Generator.Generators
                     sb.Append($", allowConcurrentExecutions: {allowConcurrentExecutions}");
                 }
 
-                sb.AppendLine(");");
+                if (isAsync && !continueOnCapturedContext)
+                {
+                    sb.AppendLine(") { ContinueOnCapturedContext = false };");
+                }
+                else
+                {
+                    sb.AppendLine(");");
+                }
             }
 
             return (null, null, null);

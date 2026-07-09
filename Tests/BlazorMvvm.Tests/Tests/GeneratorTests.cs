@@ -56,7 +56,7 @@ namespace BlazorMvvm.Tests.Tests
             {
                 if (prop == nameof(vm.CustomPropertyName)) notified = true;
             };
-            
+
             vm.CustomPropertyName = "New Value";
             Assert.IsTrue(notified);
             Assert.AreEqual("New Value", vm.CustomPropertyName);
@@ -111,8 +111,7 @@ namespace BlazorMvvm.Tests.Tests
         public async Task AsyncCommandTest()
         {
             TestViewModel vm = new();
-            vm.AsyncOperationCommand.Execute();
-            await Task.Delay(50, TestContext.CancellationToken);
+            await vm.AsyncOperationCommand.ExecuteAsync();
             Assert.AreEqual(1, vm.Counter);
         }
 
@@ -120,8 +119,7 @@ namespace BlazorMvvm.Tests.Tests
         public async Task AsyncCommandWithCheckTest()
         {
             TestViewModel vm = new();
-            vm.AsyncOperationWithCheckCommand.Execute();
-            await Task.Delay(50, TestContext.CancellationToken);
+            await vm.AsyncOperationWithCheckCommand.ExecuteAsync();
             Assert.AreEqual(1, vm.Counter);
         }
 
@@ -129,8 +127,7 @@ namespace BlazorMvvm.Tests.Tests
         public async Task AsyncValueTaskOperationTest()
         {
             TestViewModel vm = new();
-            vm.AsyncValueTaskOperationCommand.Execute();
-            await Task.Delay(50, TestContext.CancellationToken);
+            await vm.AsyncValueTaskOperationCommand.ExecuteAsync();
             Assert.AreEqual(1, vm.Counter);
         }
 
@@ -139,8 +136,7 @@ namespace BlazorMvvm.Tests.Tests
         {
             TestViewModel vm = new();
             Assert.IsTrue(await vm.AsyncWithSyncCheckCommand.CanExecute());
-            vm.AsyncWithSyncCheckCommand.Execute();
-            await Task.Delay(50, TestContext.CancellationToken);
+            await vm.AsyncWithSyncCheckCommand.ExecuteAsync();
             Assert.AreEqual(1, vm.Counter);
         }
 
@@ -149,8 +145,7 @@ namespace BlazorMvvm.Tests.Tests
         {
             TestViewModel vm = new();
             Assert.IsTrue(await vm.AsyncWithValueTaskCheckCommand.CanExecute());
-            vm.AsyncWithValueTaskCheckCommand.Execute();
-            await Task.Delay(50, TestContext.CancellationToken);
+            await vm.AsyncWithValueTaskCheckCommand.ExecuteAsync();
             Assert.AreEqual(1, vm.Counter);
         }
 
@@ -169,13 +164,13 @@ namespace BlazorMvvm.Tests.Tests
             Assert.IsFalse(vm.IsLoading);
             Assert.AreEqual(0, vm.LoadingChangedCount);
 
-            vm.LongRunningOperationCommand.Execute();
+            Task executionTask = vm.LongRunningOperationCommand.ExecuteAsync();
             await Task.Delay(10, TestContext.CancellationToken);
 
             Assert.IsTrue(vm.IsLoading);
             Assert.AreEqual(1, vm.LoadingChangedCount);
 
-            await Task.Delay(100, TestContext.CancellationToken);
+            await executionTask;
 
             Assert.IsFalse(vm.IsLoading);
             Assert.AreEqual(2, vm.LoadingChangedCount);
@@ -187,12 +182,12 @@ namespace BlazorMvvm.Tests.Tests
         {
             TestViewModel vm = new();
 
-            vm.LongRunningWithConcurrencyCheckCommand.Execute();
+            Task executionTask = vm.LongRunningWithConcurrencyCheckCommand.ExecuteAsync();
             await Task.Delay(10, TestContext.CancellationToken);
 
             Assert.IsTrue(vm.IsLoading);
 
-            await Task.Delay(100, TestContext.CancellationToken);
+            await executionTask;
 
             Assert.IsFalse(vm.IsLoading);
         }
@@ -245,12 +240,12 @@ namespace BlazorMvvm.Tests.Tests
             int propertyChangedCount = 0;
             vm.OnTriggerRefresh += _ => propertyChangedCount++;
 
-            vm.AutoRefreshOperationCommand.Execute();
+            Task executionTask = vm.AutoRefreshOperationCommand.ExecuteAsync();
             await Task.Delay(10, TestContext.CancellationToken);
 
             Assert.IsGreaterThanOrEqualTo(1, propertyChangedCount);
 
-            await Task.Delay(100, TestContext.CancellationToken);
+            await executionTask;
 
             Assert.IsGreaterThanOrEqualTo(2, propertyChangedCount);
             Assert.AreEqual(1, vm.Counter);
@@ -265,17 +260,233 @@ namespace BlazorMvvm.Tests.Tests
 
             Assert.AreEqual(0, vm.CombinedCallbackCount);
 
-            vm.CombinedCallbackOperationCommand.Execute();
+            Task executionTask = vm.CombinedCallbackOperationCommand.ExecuteAsync();
             await Task.Delay(10, TestContext.CancellationToken);
 
             Assert.IsGreaterThanOrEqualTo(1, propertyChangedCount);
             Assert.AreEqual(1, vm.CombinedCallbackCount);
 
-            await Task.Delay(100, TestContext.CancellationToken);
+            await executionTask;
 
             Assert.IsGreaterThanOrEqualTo(2, propertyChangedCount);
             Assert.AreEqual(2, vm.CombinedCallbackCount);
             Assert.AreEqual(1, vm.Counter);
+        }
+
+        [TestMethod]
+        public void CollisionViewModelTest()
+        {
+            var vmA = new BlazorMvvm.Tests.ViewModel.Collision.NamespaceA.CollisionViewModel();
+            var vmB = new BlazorMvvm.Tests.ViewModel.Collision.NamespaceB.CollisionViewModel();
+
+            vmA.ValueA = "Test A";
+            vmB.ValueB = "Test B";
+
+            Assert.AreEqual("Test A", vmA.ValueA);
+            Assert.AreEqual("Test B", vmB.ValueB);
+        }
+
+        [TestMethod]
+        public async Task ContinueOnCapturedContextTest()
+        {
+            var oldContext = SynchronizationContext.Current;
+            try
+            {
+                var testContext = new TestSynchronizationContext();
+                SynchronizationContext.SetSynchronizationContext(testContext);
+
+                bool executed = false;
+                var command = new BlazorAsyncCommand(async () =>
+                {
+                    await Task.Delay(10);
+                    executed = true;
+                });
+
+                // Test with ContinueOnCapturedContext = true (default)
+                await command.ExecuteAsync();
+                Assert.IsTrue(executed);
+                Assert.IsTrue(testContext.WasPostedTo);
+
+                // Test with ContinueOnCapturedContext = false
+                testContext.Reset();
+                command.ContinueOnCapturedContext = false;
+                await command.ExecuteAsync();
+                Assert.IsFalse(testContext.WasPostedTo);
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(oldContext);
+            }
+        }
+
+        private class TestSynchronizationContext : SynchronizationContext
+        {
+            public bool WasPostedTo { get; private set; }
+
+            public void Reset() => WasPostedTo = false;
+
+            public override void Post(SendOrPostCallback d, object? state)
+            {
+                WasPostedTo = true;
+                base.Post(d, state);
+            }
+        }
+
+        [TestMethod]
+        public void GeneratedCommandContinueOnCapturedContextTest()
+        {
+            TestViewModel vm = new();
+            Assert.IsNotNull(vm.GenerateWithConfigureAwaitFalseCommand);
+            Assert.IsFalse(vm.GenerateWithConfigureAwaitFalseCommand.ContinueOnCapturedContext);
+        }
+
+        [TestMethod]
+        public async Task OnPropertyChangedAsync_AwaitsSubscribers()
+        {
+            TestViewModel vm = new();
+            bool taskCompleted = false;
+
+            vm.OnTriggerRefreshAsync += async (prop) =>
+            {
+                await Task.Delay(50);
+                taskCompleted = true;
+            };
+
+            await vm.OnPropertyChangedAsync("Counter");
+            Assert.IsTrue(taskCompleted);
+        }
+
+        [TestMethod]
+        public async Task OnPropertyChangedAsync_ContinueOnCapturedContext()
+        {
+            TestViewModel vm = new();
+            var oldContext = SynchronizationContext.Current;
+            try
+            {
+                var testContext = new TestSynchronizationContext();
+                SynchronizationContext.SetSynchronizationContext(testContext);
+
+                vm.OnTriggerRefreshAsync += async (prop) =>
+                {
+                    await Task.Delay(10);
+                };
+
+                // Default is true (should capture context)
+                await vm.OnPropertyChangedAsync("Counter");
+                Assert.IsTrue(testContext.WasPostedTo);
+
+                // If false, should not capture context
+                testContext.Reset();
+                await vm.OnPropertyChangedAsync("Counter", continueOnCapturedContext: false);
+                Assert.IsFalse(testContext.WasPostedTo);
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(oldContext);
+            }
+        }
+
+        [TestMethod]
+        public async Task DebounceRefresh_PropertySpecific_DebouncesAndResets()
+        {
+            TestViewModel vm = new();
+            int notificationCount = 0;
+            vm.OnTriggerRefresh += (prop) =>
+            {
+                if (prop == "Counter")
+                {
+                    notificationCount++;
+                }
+            };
+
+            // Call debounce twice in rapid succession
+            vm.DebounceRefresh(50, "Counter");
+            await Task.Delay(20);
+            vm.DebounceRefresh(50, "Counter"); // should reset the timer
+
+            // Wait 20ms: total 40ms since start, shouldn't have fired yet
+            await Task.Delay(20);
+            Assert.AreEqual(0, notificationCount);
+
+            // Wait another 40ms: total 80ms since start, 60ms since second call (which had 50ms delay), should have fired once
+            await Task.Delay(40);
+            Assert.AreEqual(1, notificationCount);
+        }
+
+        [TestMethod]
+        public async Task DebounceRefresh_FullRefresh_CancelsPropertySpecific()
+        {
+            TestViewModel vm = new();
+            int propertyCount = 0;
+            int fullCount = 0;
+
+            vm.OnTriggerRefresh += (prop) =>
+            {
+                if (prop == "Counter") propertyCount++;
+                else if (prop == null) fullCount++;
+            };
+
+            // Schedule property debounce
+            vm.DebounceRefresh(50, "Counter");
+
+            // Schedule full refresh debounce immediately
+            vm.DebounceRefresh(30, null);
+
+            // Wait 70ms to let both timers expire
+            await Task.Delay(70);
+
+            // Property debounce should have been cancelled by the full refresh
+            Assert.AreEqual(0, propertyCount);
+            Assert.AreEqual(1, fullCount);
+        }
+
+        [TestMethod]
+        public async Task DebounceRefresh_CancelAllDebounces_CancelsAll()
+        {
+            TestViewModel vm = new();
+            int count = 0;
+            vm.OnTriggerRefresh += (_) => count++;
+
+            vm.DebounceRefresh(50, "Counter");
+            vm.CancelAllDebounces();
+
+            await Task.Delay(70);
+            Assert.AreEqual(0, count);
+        }
+
+        [TestMethod]
+        public async Task AsyncCommand_ConcurrentExecutions_IsExecutingTrackedCorrectly()
+        {
+            var tcs1 = new TaskCompletionSource<bool>();
+            var tcs2 = new TaskCompletionSource<bool>();
+            int executeCount = 0;
+
+            var cmd = new BlazorAsyncCommand(async () =>
+            {
+                var count = Interlocked.Increment(ref executeCount);
+                if (count == 1) await tcs1.Task;
+                else if (count == 2) await tcs2.Task;
+            }, allowConcurrentExecutions: true);
+
+            var t1 = cmd.ExecuteAsync();
+            var t2 = cmd.ExecuteAsync();
+
+            // Both are executing
+            Assert.IsTrue(cmd.IsExecuting);
+
+            // Complete first execution
+            tcs1.SetResult(true);
+            await t1;
+
+            // Should still be executing because second task is still running
+            Assert.IsTrue(cmd.IsExecuting);
+
+            // Complete second execution
+            tcs2.SetResult(true);
+            await t2;
+
+            // Finally false
+            Assert.IsFalse(cmd.IsExecuting);
         }
     }
 }

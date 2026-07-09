@@ -147,6 +147,63 @@ public class MyViewModel : BlazorViewModel
 }
 ```
 
+#### Awaiting Property Changes
+
+`BlazorViewModel` exposes an asynchronous `OnPropertyChangedAsync` method that awaits until the Blazor UI finishes rendering the updated state:
+
+```csharp
+public async Task UpdateStatusAsync(string newStatus)
+{
+    Status = newStatus;
+    // Await until the UI component actually renders the update
+    await OnPropertyChangedAsync(nameof(Status));
+}
+```
+
+##### Controlling Context Capturing (`ConfigureAwait`)
+
+Just like with asynchronous commands, you can configure synchronization context capturing for `OnPropertyChangedAsync` via the optional `continueOnCapturedContext` parameter (defaulting to `true`):
+
+```csharp
+public async Task UpdateStatusAsync(string newStatus)
+{
+    Status = newStatus;
+    // Disable capturing the UI context when awaiting property change renders
+    await OnPropertyChangedAsync(nameof(Status), continueOnCapturedContext: false);
+}
+```
+
+#### Debounced Refreshing
+
+`BlazorViewModel` provides a built-in `DebounceRefresh` method to throttle rapid or high-frequency UI updates (e.g. while typing in a search box or receiving high-frequency WebSocket streams).
+
+Calling `DebounceRefresh` automatically schedules a property change notification after a specified delay. If another debounce request is made for the same property during the delay, the timer resets.
+
+```csharp
+public class SearchViewModel : BlazorViewModel
+{
+    private string _searchText = string.Empty;
+
+    public string SearchText
+    {
+        get => _searchText;
+        set
+        {
+            if (_searchText == value) return;
+            _searchText = value;
+
+            // Debounce the full view refresh (null) for 400ms to fetch search results
+            DebounceRefresh(400, null);
+        }
+    }
+}
+```
+
+##### Key Features:
+* **Implicit Property Names**: Calling `DebounceRefresh(500)` inside a property setter automatically uses `[CallerMemberName]` to key the debounce timer specifically to that property.
+* **Full View Refresh Cancellation**: Calling `DebounceRefresh(delay, null)` (full view refresh) automatically cancels all active property-specific debounce timers, preventing redundant rendering.
+* **Disposal Safety**: To prevent memory and resource leaks, you can call `CancelAllDebounces()` when the ViewModel is no longer needed (for example, inside a custom `IDisposable.Dispose()` implementation).
+
 ---
 
 ### Commands
@@ -170,6 +227,43 @@ private async Task LoadDataAsync()
 }
 
 // Generated: public IBlazorAsyncCommand LoadDataAsyncCommand { get; }
+```
+
+Asynchronous commands implement interfaces that expose both `Execute()` and `ExecuteAsync()`:
+- `Execute()`: Invokes the command in a fire-and-forget manner (`async void` / discarded Task).
+- `ExecuteAsync()`: Returns a `Task` that can be awaited. This is highly recommended when invoking commands programmatically (e.g., from component lifecycle hooks, tests, or other ViewModel logic) to support proper exception propagation and flow control:
+
+```csharp
+// Programmatic await usage
+await ViewModel.LoadDataAsyncCommand.ExecuteAsync();
+```
+
+#### Controlling Context Capturing (`ConfigureAwait`)
+Asynchronous commands expose a `ContinueOnCapturedContext` property (defaulting to `true`). 
+* If set to `false`, the command will run/resume its execution on a thread pool thread (`ConfigureAwait(false)`).
+* Since Blazor component UI refreshes in `BlazorMvvmComponentBase` are dispatched via `InvokeAsync`, it is **completely thread-safe** to run commands on background threads; the UI will not crash with threading exceptions.
+* This is especially useful for offloading heavy work to background threads.
+
+##### Source Generation
+Use the named parameter `ContinueOnCapturedContext = false` in `[BlazorCommand]`:
+```csharp
+[BlazorCommand(ContinueOnCapturedContext = false)]
+private async Task LoadDataAsync()
+{
+    // The source generator configures the generated command with ContinueOnCapturedContext = false
+}
+```
+
+##### Manual Implementation
+```csharp
+public MyViewModel()
+{
+    // Configure command to execute without capturing the UI synchronization context
+    LoadDataCommand = new BlazorAsyncCommand(LoadDataAsync) 
+    { 
+        ContinueOnCapturedContext = false 
+    };
+}
 ```
 
 #### Commands with Parameters

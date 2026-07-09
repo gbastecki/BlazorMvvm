@@ -6,6 +6,7 @@ namespace BlazorMvvm;
 public class BlazorAsyncRelayCommand<T> : IBlazorAsyncRelayCommand<T>
 {
     private readonly SemaphoreSlim _executionSemaphore = new(1, 1);
+    private int _runningTasksCount;
 
     private readonly Func<T, Task> _execute;
     private readonly Func<T, Task<bool>>? _canExecute;
@@ -25,6 +26,8 @@ public class BlazorAsyncRelayCommand<T> : IBlazorAsyncRelayCommand<T>
         }
     }
 
+    public bool ContinueOnCapturedContext { get; set; } = true;
+
     public BlazorAsyncRelayCommand(Func<T, Task> execute, Func<T, Task<bool>>? canExecute = null, bool allowConcurrentExecutions = false)
     {
         this._execute = execute ?? throw new ArgumentNullException(nameof(execute));
@@ -35,24 +38,35 @@ public class BlazorAsyncRelayCommand<T> : IBlazorAsyncRelayCommand<T>
     public async Task<bool> CanExecute(T arg)
     {
         if (!AllowConcurrentExecutions && IsExecuting) return false;
-        return this._canExecute == null || await this._canExecute(arg);
+        return this._canExecute == null || await this._canExecute(arg).ConfigureAwait(ContinueOnCapturedContext);
     }
 
-    public async void Execute(T arg)
+    public async Task ExecuteAsync(T arg)
     {
-        if (this._canExecute != null && !await this._canExecute(arg)) return;
-        bool shouldExecute = AllowConcurrentExecutions || await _executionSemaphore.WaitAsync(0);
+        if (this._canExecute != null && !await this._canExecute(arg).ConfigureAwait(ContinueOnCapturedContext)) return;
+        bool shouldExecute = AllowConcurrentExecutions || await _executionSemaphore.WaitAsync(0).ConfigureAwait(ContinueOnCapturedContext);
         if (!shouldExecute) return;
 
         try
         {
-            IsExecuting = true;
-            await this._execute(arg);
+            if (Interlocked.Increment(ref _runningTasksCount) == 1)
+            {
+                IsExecuting = true;
+            }
+            await this._execute(arg).ConfigureAwait(ContinueOnCapturedContext);
         }
         finally
         {
-            IsExecuting = false;
+            if (Interlocked.Decrement(ref _runningTasksCount) == 0)
+            {
+                IsExecuting = false;
+            }
             if (!AllowConcurrentExecutions) _executionSemaphore.Release();
         }
+    }
+
+    public void Execute(T arg)
+    {
+        _ = ExecuteAsync(arg);
     }
 }

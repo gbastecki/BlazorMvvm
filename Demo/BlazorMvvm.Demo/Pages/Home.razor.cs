@@ -15,6 +15,7 @@ namespace BlazorMvvm.Demo.Pages
         SharedObservableViewModel SharedObservableViewModel;
         ButtonExampleViewModel ButtonExampleViewModel;
         SvgWrapperViewModel SvgWrapperViewModel;
+        DebounceExampleViewModel DebounceExampleViewModel;
 
         MessengerSenderViewModel MessengerSender;
         MessengerReceiverViewModel MessengerReceiver;
@@ -25,6 +26,7 @@ namespace BlazorMvvm.Demo.Pages
             SharedObservableViewModel = new();
             ButtonExampleViewModel = new();
             SvgWrapperViewModel = new(SvgHandler);
+            DebounceExampleViewModel = new();
 
             MessengerSender = new MessengerSenderViewModel(Messenger);
             MessengerReceiver = new MessengerReceiverViewModel(Messenger);
@@ -39,6 +41,12 @@ namespace BlazorMvvm.Demo.Pages
                 await JS.InvokeVoidAsync("scrollSync.init");
             }
             await base.OnAfterRenderAsync(firstRender);
+        }
+
+        protected override void OnDispose()
+        {
+            DebounceExampleViewModel?.Dispose();
+            base.OnDispose();
         }
     }
 }

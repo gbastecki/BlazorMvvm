@@ -11,6 +11,7 @@
             <li><a href="#messenger">BlazorMessenger</a></li>
             <li><a href="#viewmodel-factory">ViewModelFactory</a></li>
             <li><a href="#performance">Performance Demo</a></li>
+            <li><a href="#debounce">Debounced Refreshing</a></li>
             <li><a href="#source-repository">Source Repository</a></li>
         </ul>
     </nav>
@@ -218,7 +219,10 @@ public partial class Home : BlazorMvvmComponentBase&lt;HomeViewModel&gt;
     
     public MyViewModel()
     {
-        LoadDataAsyncCommand = new BlazorAsyncCommand(LoadDataAsync);
+        LoadDataAsyncCommand = new BlazorAsyncCommand(LoadDataAsync)
+        {
+            ContinueOnCapturedContext = false // Optional: offload continuation to background thread
+        };
         LoadDataAsyncCommand.OnIsExecutingChanged += OnExecutingChanged;
     }
     
@@ -763,6 +767,89 @@ public partial class Home : BlazorMvvmComponentBase&lt;HomeViewModel&gt;
                         </svg>
                     </div>
                 </ObservableComponent>
+            </div>
+        </section>
+        @* ===== DEBOUNCED REFRESHING ===== *@
+        <section id="debounce" class="demo-section">
+            <h2>Debounced Refreshing</h2>
+            <div class="demo-card">
+                <h3>Text Search Debouncing</h3>
+                <p>Type in the input box below. The statistics (character count and reversed text) are debounced and only recalculate after you stop typing for 400ms.</p>
+                <ObservableComponent ViewModel="DebounceExampleViewModel">
+                    <div class="demo-interactive">
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label for="debounce-input" style="font-weight: 600; display: block; margin-bottom: 8px;">Search Input</label>
+                            <input id="debounce-input" type="text"
+                                   value="@DebounceExampleViewModel.SearchText"
+                                   @oninput="@((ChangeEventArgs e) => DebounceExampleViewModel.SearchText = e.Value?.ToString() ?? string.Empty)"
+                                   placeholder="Type something to see debounce in action..."
+                                   class="form-control"
+                                   style="width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; background-color: var(--card-bg); color: var(--text-color);" />
+                        </div>
+                        <div class="demo-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                            <div class="stat-box" style="padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.02);">
+                                <span class="stat-label" style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Instant Property (SearchText)</span>
+                                <span class="stat-value" style="font-size: 1.25rem; font-weight: 700; color: #ffca28; word-break: break-all; min-height: 1.5em; display: inline-block;">@DebounceExampleViewModel.SearchText</span>
+                            </div>
+                            <div class="stat-box" style="padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.02);">
+                                <span class="stat-label" style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Debounced (Character Count)</span>
+                                <span class="stat-value" style="font-size: 1.25rem; font-weight: 700; color: #42a5f5; min-height: 1.5em; display: inline-block;">@DebounceExampleViewModel.CharacterCount</span>
+                            </div>
+                            <div class="stat-box" style="padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.02);">
+                                <span class="stat-label" style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Debounced (Reversed Text)</span>
+                                <span class="stat-value" style="font-size: 1.25rem; font-weight: 700; color: #66bb6a; word-break: break-all; min-height: 1.5em; display: inline-block;">@DebounceExampleViewModel.ReversedText</span>
+                            </div>
+                        </div>
+                    </div>
+                </ObservableComponent>
+                <div class="code-tabs">
+                    <details open>
+                        <summary>ViewModel Implementation</summary>
+                        <pre><code>public class DebounceExampleViewModel : BlazorViewModel, IDisposable
+{
+    private string _searchText = string.Empty;
+
+    public string SearchText
+    {
+        get => _searchText;
+        set
+        {
+            if (_searchText == value) return;
+            _searchText = value;
+
+            // Debounce the full refresh for 400ms to update dependent properties
+            DebounceRefresh(400, null);
+        }
+    }
+
+    public int CharacterCount => _searchText.Length;
+    public string ReversedText
+    {
+        get
+        {
+            char[] arr = _searchText.ToCharArray();
+            System.Array.Reverse(arr);
+            return new string(arr);
+        }
+    }
+
+    public void Dispose()
+    {
+        base.CancelAllDebounces();
+        GC.SuppressFinalize(this);
+    }
+}</code></pre>
+                    </details>
+                    <details>
+                        <summary>Razor View Markup</summary>
+                        <pre><code>&lt;input value="@@DebounceExampleViewModel.SearchText" 
+       @@oninput="@@((ChangeEventArgs e) =&gt; DebounceExampleViewModel.SearchText = e.Value?.ToString())" /&gt;
+
+&lt;p&gt;Instant: @@DebounceExampleViewModel.SearchText&lt;/p&gt;
+&lt;p&gt;Character Count: @@DebounceExampleViewModel.CharacterCount&lt;/p&gt;
+&lt;p&gt;Reversed: @@DebounceExampleViewModel.ReversedText&lt;/p&gt;</code></pre>
+                    </details>
+                </div>
             </div>
         </section>
         @* ===== SOURCE REPOSITORY ===== *@

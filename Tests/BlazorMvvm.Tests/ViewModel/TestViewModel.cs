@@ -144,5 +144,11 @@
         {
             CombinedCallbackCount++;
         }
+
+        [BlazorCommand(ContinueOnCapturedContext = false)]
+        private async Task GenerateWithConfigureAwaitFalse()
+        {
+            await Task.Delay(10);
+        }
     }
 }

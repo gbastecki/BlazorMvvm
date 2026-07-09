@@ -1,6 +1,4 @@
-﻿using BlazorMvvm;
-
-namespace BlazorMvvm.Demo.Pages
+﻿namespace BlazorMvvm.Demo.Pages
 {
     public class ObservablePartViewModel : BlazorViewModel
     {

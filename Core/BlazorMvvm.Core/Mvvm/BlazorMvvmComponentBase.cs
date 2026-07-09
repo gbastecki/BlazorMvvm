@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace BlazorMvvm;
+
 public abstract class BlazorMvvmComponentBase<TViewModel> : ComponentBase, IAsyncDisposable where TViewModel : IBlazorViewModel
 {
     [Inject] protected IServiceProvider ServiceProvider { get; set; } = default!;
@@ -13,6 +14,7 @@ public abstract class BlazorMvvmComponentBase<TViewModel> : ComponentBase, IAsyn
     protected TViewModel? BaseViewModel;
     protected HashSet<string>? PropertyNamesHashset;
     private bool _shouldRefresh;
+    private TaskCompletionSource? _renderTcs;
 
     protected override void OnInitialized()
     {
@@ -45,8 +47,9 @@ public abstract class BlazorMvvmComponentBase<TViewModel> : ComponentBase, IAsyn
     {
         if (this.BaseViewModel != null)
         {
-            this.BaseViewModel.OnTriggerRefresh -= TriggerRefresh;
+            this.BaseViewModel.OnTriggerRefreshAsync -= TriggerRefreshAsync;
         }
+        _renderTcs?.TrySetCanceled();
     }
     protected virtual async ValueTask OnDisposeAsync()
     {
@@ -58,12 +61,12 @@ public abstract class BlazorMvvmComponentBase<TViewModel> : ComponentBase, IAsyn
         if (ReferenceEquals(this.BaseViewModel, ViewModel)) return;
         if (this.BaseViewModel != null)
         {
-            this.BaseViewModel.OnTriggerRefresh -= TriggerRefresh;
+            this.BaseViewModel.OnTriggerRefreshAsync -= TriggerRefreshAsync;
         }
         this.BaseViewModel = ViewModel;
         if (this.BaseViewModel != null)
         {
-            this.BaseViewModel.OnTriggerRefresh += TriggerRefresh;
+            this.BaseViewModel.OnTriggerRefreshAsync += TriggerRefreshAsync;
         }
         InvokeRefresh();
     }
@@ -72,19 +75,27 @@ public abstract class BlazorMvvmComponentBase<TViewModel> : ComponentBase, IAsyn
         this.PropertyNamesHashset = PropertyNames != null && PropertyNames.Length > 0 ? new(PropertyNames) : null;
     }
 
-    private void TriggerRefresh(string? propertyName)
+    private Task TriggerRefreshAsync(string? propertyName)
     {
         if (propertyName != null && PropertyNamesHashset != null)
         {
-            if (!PropertyNamesHashset.Contains(propertyName)) return;
+            if (!PropertyNamesHashset.Contains(propertyName)) return Task.CompletedTask;
         }
-        InvokeRefresh();
+        return InvokeRefreshAsync();
+    }
+
+    protected virtual Task InvokeRefreshAsync()
+    {
+        _shouldRefresh = true;
+        _renderTcs ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var task = _renderTcs.Task;
+        _ = base.InvokeAsync(StateHasChanged);
+        return task;
     }
 
     protected virtual void InvokeRefresh()
     {
-        _shouldRefresh = true;
-        base.InvokeAsync(StateHasChanged);
+        _ = InvokeRefreshAsync();
     }
 
     protected override bool ShouldRender()
@@ -92,5 +103,16 @@ public abstract class BlazorMvvmComponentBase<TViewModel> : ComponentBase, IAsyn
         if (!_shouldRefresh) return false;
         _shouldRefresh = false;
         return base.ShouldRender();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+        var tcs = _renderTcs;
+        if (tcs != null)
+        {
+            _renderTcs = null;
+            tcs.TrySetResult();
+        }
     }
 }
